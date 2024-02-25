@@ -37,6 +37,17 @@ void token_reset(Token* token)
     token->position = 0;
 }
 
+void token_copy(Token* destination, Token* source)
+{
+    if (destination->size < source->size) {
+        destination->lexeme = (char*)realloc(destination->lexeme, source->size);
+        destination->size = source->size;
+    }
+    strncpy(destination->lexeme, source->lexeme, destination->size);
+    destination->type = source->type;
+    destination->position = source->position;
+}
+
 void token_print(Token* token)
 {
     switch (token->type) {

@@ -2,6 +2,8 @@
 #include <stdlib.h>
 
 #include "monkey/lexer.h"
+#include "monkey/parser.h"
+#include "monkey/program.h"
 #include "monkey/token.h"
 
 int main(int argc, char* argv[])
@@ -17,11 +19,18 @@ int main(int argc, char* argv[])
         exit(1);
     }
 
-    Token* token = token_init();
-    while (lexer_next(file, token)) {
-        token_print(token);
+    Program* program = program_init();
+    Parser* parser = parser_init(file);
+    bool result = parser_parse_program(parser, program);
+    parser_free(parser);
+    program_print(program);
+    program_free(program);
+
+    if (result) {
+        printf("result: true\n");
+    } else {
+        printf("result: false\n");
     }
-    token_free(token);
 
     return 0;
 }

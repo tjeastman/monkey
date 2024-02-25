@@ -56,6 +56,7 @@ Token* token_init();
 void token_free(Token*);
 void token_extend(Token*, char);
 void token_reset(Token*);
+void token_copy(Token*, Token*);
 void token_print(Token*);
 
 #endif // MONKEY_TOKEN_H_
