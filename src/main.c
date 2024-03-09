@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "monkey/eval.h"
 #include "monkey/lexer.h"
 #include "monkey/parser.h"
 #include "monkey/program.h"
@@ -47,6 +48,27 @@ bool parse(FILE* file)
     return result;
 }
 
+bool eval(FILE* file)
+{
+    Parser parser;
+    parser_init(&parser, file);
+
+    Program program;
+    program_init(&program);
+
+    bool result = parser_parse_program(&parser, &program);
+    if (result) {
+        evaluate_program(&program);
+    } else {
+        errors_print(&parser.errors);
+    }
+
+    program_free(&program);
+    parser_free(&parser);
+
+    return result;
+}
+
 int main(int argc, char* argv[])
 {
     if (argc != 3) {
@@ -65,6 +87,8 @@ int main(int argc, char* argv[])
         result = tokenize(file);
     } else if (strncmp(argv[1], "parse", 5) == 0) {
         result = parse(file);
+    } else if (strncmp(argv[1], "eval", 4) == 0) {
+        result = eval(file);
     } else {
         printf("Unrecognized command: %s\n", argv[1]);
         exit(1);

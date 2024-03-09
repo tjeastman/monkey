@@ -12,6 +12,8 @@ add_executable(
   statement.c
   program.c
   error.c
+  object.c
+  eval.c
 )
 
 set_property(TARGET main PROPERTY C_STANDARD 17)
