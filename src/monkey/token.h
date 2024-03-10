@@ -3,7 +3,10 @@
 
 #include <stddef.h>
 
-typedef enum {
+#include "monkey/string.h"
+
+typedef enum TokenType TokenType;
+enum TokenType {
     TOKEN_NONE,
     TOKEN_END,
     TOKEN_ILLEGAL,
@@ -43,18 +46,18 @@ typedef enum {
     TOKEN_RIGHT_PAREN,
     TOKEN_RIGHT_BRACE,
     TOKEN_RIGHT_BRACKET,
-} TokenType;
+};
 
-typedef struct {
+typedef struct Token Token;
+struct Token {
     TokenType type;
-    char* lexeme;
-    size_t size;
-    size_t position;
-} Token;
+    size_t line;
+    ssize_t position;
+    String lexeme;
+};
 
-Token* token_init();
+void token_init(Token*);
 void token_free(Token*);
-void token_extend(Token*, char);
 void token_reset(Token*);
 void token_copy(Token*, Token*);
 void token_print(Token*);

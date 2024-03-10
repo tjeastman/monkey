@@ -1,12 +1,52 @@
 #include <ctype.h>
 #include <stdbool.h>
-#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "monkey/lexer.h"
 #include "monkey/token.h"
 
-bool lexer_next_aux(FILE* file, Token* token)
+void lexer_init(Lexer* lexer, FILE* file)
+{
+    lexer->file = file;
+    lexer->line = 0;
+    lexer->position = 0;
+    lexer->pushed = false;
+}
+
+int lexer_pop_char(Lexer* lexer)
+{
+    if (lexer->pushed) {
+        lexer->pushed = false;
+        return lexer->push;
+    }
+
+    int c = fgetc(lexer->file);
+    if (c == EOF) {
+        return c;
+    } else if (c == '\n') {
+        lexer->line++;
+        lexer->position = -1; // next char after newline is 0
+    } else {
+        lexer->position += 1;
+    }
+    return c;
+}
+
+void lexer_push_char(Lexer* lexer, int c)
+{
+    lexer->pushed = true;
+    lexer->push = c;
+}
+
+void lexer_token_start(Lexer* lexer, Token* token, TokenType type)
+{
+    token->type = type;
+    token->line = lexer->line;
+    token->position = lexer->position;
+}
+
+bool lexer_token_next_aux(Lexer* lexer, Token* token)
 {
     int c;
 next:
@@ -16,7 +56,7 @@ next:
      * occurred. Handle the case where tokens in this class are terminated by
      * reaching the end of the input file.
      */
-    if ((c = fgetc(file)) != EOF) {
+    if ((c = lexer_pop_char(lexer)) != EOF) {
 
     } else if (token->type == TOKEN_NONE || token->type == TOKEN_COMMENT) {
         token->type = TOKEN_END;
@@ -52,7 +92,7 @@ next:
      * from the lexeme below.
      */
     if (token->type == TOKEN_NONE && c == '"') {
-        token->type = TOKEN_STRING;
+        lexer_token_start(lexer, token, TOKEN_STRING);
         goto next;
     }
 
@@ -68,31 +108,31 @@ next:
         token_reset(token);
         goto next;
     } else if (token->type == TOKEN_IDENTIFIER && !isalnum(c) && c != '_') {
-        ungetc(c, file);
+        lexer_push_char(lexer, c);
         return true;
     } else if (token->type == TOKEN_INTEGER && !isdigit(c)) {
-        ungetc(c, file);
+        lexer_push_char(lexer, c);
         return true;
     } else if (token->type == TOKEN_STRING && c == '"') {
         return true;
     } else if (token->type == TOKEN_ASSIGN && c != '=') {
-        ungetc(c, file);
+        lexer_push_char(lexer, c);
         return true;
     } else if (token->type == TOKEN_DIVIDE && c != '/') {
-        ungetc(c, file);
+        lexer_push_char(lexer, c);
         return true;
     } else if (token->type == TOKEN_GREATER && c != '=') {
-        ungetc(c, file);
+        lexer_push_char(lexer, c);
         return true;
     } else if (token->type == TOKEN_LESS && c != '=') {
-        ungetc(c, file);
+        lexer_push_char(lexer, c);
         return true;
     } else if (token->type == TOKEN_NOT && c != '=') {
-        ungetc(c, file);
+        lexer_push_char(lexer, c);
         return true;
     }
 
-    token_extend(token, c);
+    string_append(&token->lexeme, c);
 
     /*
      * Process the next character for the "look ahead" tokens. Note that the
@@ -134,101 +174,103 @@ next:
      * keywords just before returning.
      */
     if (isalpha(c)) {
-        token->type = TOKEN_IDENTIFIER;
+        lexer_token_start(lexer, token, TOKEN_IDENTIFIER);
         goto next;
     } else if (isdigit(c)) {
-        token->type = TOKEN_INTEGER;
+        lexer_token_start(lexer, token, TOKEN_INTEGER);
         goto next;
     }
 
     switch (c) {
     case '=':
-        token->type = TOKEN_ASSIGN;
+        lexer_token_start(lexer, token, TOKEN_ASSIGN);
         goto next;
     case '+':
-        token->type = TOKEN_PLUS;
+        lexer_token_start(lexer, token, TOKEN_PLUS);
         return true;
     case '-':
-        token->type = TOKEN_MINUS;
+        lexer_token_start(lexer, token, TOKEN_MINUS);
         return true;
     case '*':
-        token->type = TOKEN_MULTIPLY;
+        lexer_token_start(lexer, token, TOKEN_MULTIPLY);
         return true;
     case '/':
-        token->type = TOKEN_DIVIDE;
+        lexer_token_start(lexer, token, TOKEN_DIVIDE);
         goto next;
     case '>':
-        token->type = TOKEN_GREATER;
+        lexer_token_start(lexer, token, TOKEN_GREATER);
         goto next;
     case '<':
-        token->type = TOKEN_LESS;
+        lexer_token_start(lexer, token, TOKEN_LESS);
         goto next;
     case '!':
-        token->type = TOKEN_NOT;
+        lexer_token_start(lexer, token, TOKEN_NOT);
         goto next;
     case ',':
-        token->type = TOKEN_COMMA;
+        lexer_token_start(lexer, token, TOKEN_COMMA);
         return true;
     case ':':
-        token->type = TOKEN_COLON;
+        lexer_token_start(lexer, token, TOKEN_COLON);
         return true;
     case ';':
-        token->type = TOKEN_SEMICOLON;
+        lexer_token_start(lexer, token, TOKEN_SEMICOLON);
         return true;
     case '(':
-        token->type = TOKEN_LEFT_PAREN;
+        lexer_token_start(lexer, token, TOKEN_LEFT_PAREN);
         return true;
     case '{':
-        token->type = TOKEN_LEFT_BRACE;
+        lexer_token_start(lexer, token, TOKEN_LEFT_BRACE);
         return true;
     case '[':
-        token->type = TOKEN_LEFT_BRACKET;
+        lexer_token_start(lexer, token, TOKEN_LEFT_BRACKET);
         return true;
     case ')':
-        token->type = TOKEN_RIGHT_PAREN;
+        lexer_token_start(lexer, token, TOKEN_RIGHT_PAREN);
         return true;
     case '}':
-        token->type = TOKEN_RIGHT_BRACE;
+        lexer_token_start(lexer, token, TOKEN_RIGHT_BRACE);
         return true;
     case ']':
-        token->type = TOKEN_RIGHT_BRACKET;
+        lexer_token_start(lexer, token, TOKEN_RIGHT_BRACKET);
         return true;
     default:
-        token->type = TOKEN_ILLEGAL;
+        lexer_token_start(lexer, token, TOKEN_ILLEGAL);
         return false;
     }
 }
 
-bool lexer_next(FILE* file, Token* token)
+Token lexer_token_next(Lexer* lexer)
 {
-    token_reset(token);
+    Token token;
+    token_init(&token);
 
-    if (feof(file)) {
-        return false;
-    } else if (!lexer_next_aux(file, token)) {
-        return false;
-    } else if (token->type != TOKEN_IDENTIFIER) {
-        return true;
+    if (feof(lexer->file)) {
+        lexer_token_start(lexer, &token, TOKEN_END);
+        return token;
+    } else if (!lexer_token_next_aux(lexer, &token)) {
+        return token;
+    } else if (token.type != TOKEN_IDENTIFIER) {
+        return token;
     }
 
     /*
      * Compare identifier tokens to language keywords and convert to appropriate
      * keyword tokens if a match is found.
      */
-    if (strncmp(token->lexeme, "let", 3) == 0) {
-        token->type = TOKEN_LET;
-    } else if (strncmp(token->lexeme, "if", 2) == 0) {
-        token->type = TOKEN_IF;
-    } else if (strncmp(token->lexeme, "else", 4) == 0) {
-        token->type = TOKEN_ELSE;
-    } else if (strncmp(token->lexeme, "fn", 2) == 0) {
-        token->type = TOKEN_FUNCTION;
-    } else if (strncmp(token->lexeme, "return", 6) == 0) {
-        token->type = TOKEN_RETURN;
-    } else if (strncmp(token->lexeme, "true", 4) == 0) {
-        token->type = TOKEN_TRUE;
-    } else if (strncmp(token->lexeme, "false", 5) == 0) {
-        token->type = TOKEN_FALSE;
+    if (strncmp(token.lexeme.value, "let", 3) == 0) {
+        token.type = TOKEN_LET;
+    } else if (strncmp(token.lexeme.value, "if", 2) == 0) {
+        token.type = TOKEN_IF;
+    } else if (strncmp(token.lexeme.value, "else", 4) == 0) {
+        token.type = TOKEN_ELSE;
+    } else if (strncmp(token.lexeme.value, "fn", 2) == 0) {
+        token.type = TOKEN_FUNCTION;
+    } else if (strncmp(token.lexeme.value, "return", 6) == 0) {
+        token.type = TOKEN_RETURN;
+    } else if (strncmp(token.lexeme.value, "true", 4) == 0) {
+        token.type = TOKEN_TRUE;
+    } else if (strncmp(token.lexeme.value, "false", 5) == 0) {
+        token.type = TOKEN_FALSE;
     }
-    return true;
+    return token;
 }

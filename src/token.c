@@ -1,51 +1,35 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
+#include "monkey/string.h"
 #include "monkey/token.h"
 
-Token* token_init()
+void token_init(Token* token)
 {
-    Token* token = (Token*)malloc(sizeof(Token));
     token->type = TOKEN_NONE;
-    token->lexeme = (char*)malloc(2);
-    token->size = 2;
+    token->line = 0;
     token->position = 0;
-    return token;
+    string_init(&token->lexeme);
 }
 
 void token_free(Token* token)
 {
-    free(token->lexeme);
-    free(token);
-}
-
-void token_extend(Token* token, char c)
-{
-    if (token->size <= token->position) {
-        token->lexeme = (char*)realloc(token->lexeme, 2 * token->size);
-        token->size *= 2;
-    }
-    token->lexeme[token->position] = c;
-    token->position++;
+    string_free(&token->lexeme);
 }
 
 void token_reset(Token* token)
 {
     token->type = TOKEN_NONE;
-    memset(token->lexeme, 0, token->size);
+    token->line = 0;
     token->position = 0;
+    string_reset(&token->lexeme);
 }
 
 void token_copy(Token* destination, Token* source)
 {
-    if (destination->size < source->size) {
-        destination->lexeme = (char*)realloc(destination->lexeme, source->size);
-        destination->size = source->size;
-    }
-    strncpy(destination->lexeme, source->lexeme, destination->size);
     destination->type = source->type;
+    destination->line = source->line;
     destination->position = source->position;
+    string_copy(&destination->lexeme, &source->lexeme);
 }
 
 void token_print(Token* token)
@@ -58,13 +42,13 @@ void token_print(Token* token)
         printf("END\n");
         break;
     case TOKEN_ILLEGAL:
-        printf("ILLEGAL(%s)\n", token->lexeme);
+        printf("ILLEGAL(%s)\n", token->lexeme.value);
         break;
     case TOKEN_COMMENT:
-        printf("COMMENT(%s)\n", token->lexeme);
+        printf("COMMENT(%s)\n", token->lexeme.value);
         break;
     case TOKEN_IDENTIFIER:
-        printf("IDENTIFIER(%s)\n", token->lexeme);
+        printf("IDENTIFIER(%s)\n", token->lexeme.value);
         break;
     case TOKEN_LET:
         printf("LET\n");
@@ -82,10 +66,10 @@ void token_print(Token* token)
         printf("RETURN\n");
         break;
     case TOKEN_INTEGER:
-        printf("INTEGER(%s)\n", token->lexeme);
+        printf("INTEGER(%s)\n", token->lexeme.value);
         break;
     case TOKEN_STRING:
-        printf("STRING(%s)\n", token->lexeme);
+        printf("STRING(%s)\n", token->lexeme.value);
         break;
     case TOKEN_TRUE:
         printf("TRUE\n");
@@ -105,7 +89,7 @@ void token_print(Token* token)
     case TOKEN_LESS_EQUAL:
     case TOKEN_NOT:
     case TOKEN_NOT_EQUAL:
-        printf("OPERATOR[%s]\n", token->lexeme);
+        printf("OPERATOR[%s]\n", token->lexeme.value);
         break;
     case TOKEN_COMMA:
         printf("COMMA\n");

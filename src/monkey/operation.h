@@ -1,7 +1,9 @@
 #ifndef MONKEY_OPERATION_H_
 #define MONKEY_OPERATION_H_
 
-typedef enum {
+typedef enum Operation Operation;
+enum Operation {
+    OPERATION_NONE,
     OPERATION_EQUAL,
     OPERATION_NOT_EQUAL,
     OPERATION_GREATER,
@@ -14,9 +16,10 @@ typedef enum {
     OPERATION_DIVIDE,
     OPERATION_NOT,
     OPERATION_NEGATIVE,
-} Operation;
+};
 
-typedef enum {
+typedef enum Precedence Precedence;
+enum Precedence {
     PRECEDENCE_LOWEST = 0,
     PRECEDENCE_EQUALITY = 1,
     PRECEDENCE_RELATIONAL = 2,
@@ -24,7 +27,7 @@ typedef enum {
     PRECEDENCE_PRODUCT = 4,
     PRECEDENCE_PREFIX = 5,
     PRECEDENCE_CALL = 6,
-} Precedence;
+};
 
 Precedence operation_precedence(Operation);
 void operation_print(Operation);
