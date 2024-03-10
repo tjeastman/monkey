@@ -4,58 +4,66 @@
 #include <stdbool.h>
 
 #include "monkey/operation.h"
+#include "monkey/string.h"
 
-typedef enum {
+typedef enum ExpressionType ExpressionType;
+enum ExpressionType {
+    EXPRESSION_NONE,
     EXPRESSION_INTEGER,
-    EXPRESSION_IDENTIFIER,
-    EXPRESSION_STRING,
     EXPRESSION_BOOL,
+    EXPRESSION_STRING,
+    EXPRESSION_IDENTIFIER,
     EXPRESSION_PREFIX,
     EXPRESSION_INFIX,
-} ExpressionType;
+};
 
-typedef struct {
-    char* value;
-} IdentifierExpression;
+typedef struct IdentifierExpression IdentifierExpression;
+struct IdentifierExpression {
+    String value;
+};
 
-typedef struct {
+typedef struct BooleanExpression BooleanExpression;
+struct BooleanExpression {
     bool value;
-} BooleanExpression;
+};
 
-typedef struct {
+typedef struct IntegerExpression IntegerExpression;
+struct IntegerExpression {
     int value;
-} IntegerExpression;
+};
 
-typedef struct {
-    char* value;
-} StringExpression;
+typedef struct StringExpression StringExpression;
+struct StringExpression {
+    String value;
+};
 
 typedef struct Expression Expression;
 
-typedef struct {
+typedef struct PrefixExpression PrefixExpression;
+struct PrefixExpression {
     Operation operation;
     Expression* operand;
-} PrefixExpression;
+};
 
-typedef struct {
+typedef struct InfixExpression InfixExpression;
+struct InfixExpression {
     Operation operation;
     Expression* operand[2];
-} InfixExpression;
+};
 
 struct Expression {
     ExpressionType type;
     union {
-        IdentifierExpression identifier;
-        BooleanExpression boolean;
         IntegerExpression integer;
+        BooleanExpression boolean;
         StringExpression string;
+        IdentifierExpression identifier;
         PrefixExpression prefix;
         InfixExpression infix;
     };
 };
 
-Expression* expression_init(ExpressionType);
-void expression_print(Expression*);
 void expression_free(Expression*);
+void expression_print(Expression*);
 
 #endif // MONKEY_EXPRESSION_H_

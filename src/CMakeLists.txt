@@ -11,6 +11,7 @@ add_executable(
   expression.c
   statement.c
   program.c
+  error.c
 )
 
 set_property(TARGET main PROPERTY C_STANDARD 17)

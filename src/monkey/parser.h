@@ -4,19 +4,20 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "monkey/expression.h"
-#include "monkey/operation.h"
+#include "monkey/error.h"
+#include "monkey/lexer.h"
 #include "monkey/program.h"
-#include "monkey/statement.h"
 #include "monkey/token.h"
 
-typedef struct {
-    FILE* file;
-    Token* token;
-    Token* token_next;
-} Parser;
+typedef struct Parser Parser;
+struct Parser {
+    Lexer lexer;
+    Token token;
+    Token token_next;
+    ErrorList errors;
+};
 
-Parser* parser_init(FILE*);
+void parser_init(Parser*, FILE*);
 void parser_free(Parser*);
 bool parser_parse_program(Parser*, Program*);
 

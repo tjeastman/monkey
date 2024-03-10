@@ -5,15 +5,16 @@
 
 #include "monkey/statement.h"
 
-typedef struct {
-    Statement** statements;
+typedef struct Program Program;
+struct Program {
     size_t size;
     size_t length;
-} Program;
+    Statement* statements;
+};
 
-Program* program_init();
+void program_init(Program*);
 void program_free(Program*);
-void program_extend(Program*, Statement*);
+void program_extend(Program*, Statement);
 void program_print(Program*);
 
 #endif // MONKEY_PROGRAM_H_

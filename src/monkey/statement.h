@@ -2,21 +2,25 @@
 #define MONKEY_STATEMENT_H_
 
 #include "monkey/expression.h"
+#include "monkey/string.h"
 
-typedef enum {
+typedef enum StatementType StatementType;
+enum StatementType {
+    STATEMENT_NONE,
     STATEMENT_LET,
     STATEMENT_RETURN,
     STATEMENT_EXPRESSION,
-} StatementType;
+};
 
-typedef struct {
+typedef struct Statement Statement;
+struct Statement {
     StatementType type;
-    char* identifier;
-    Expression* expression;
-} Statement;
+    String* identifier;
+    Expression expression;
+};
 
-Statement* statement_init(StatementType, char*, Expression*);
-void statement_print(Statement*);
+void statement_init(Statement*);
 void statement_free(Statement*);
+void statement_print(Statement*);
 
 #endif // MONKEY_STATEMENT_H_

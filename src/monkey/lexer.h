@@ -6,6 +6,16 @@
 
 #include "monkey/token.h"
 
-bool lexer_next(FILE*, Token*);
+typedef struct Lexer Lexer;
+struct Lexer {
+    FILE* file;
+    size_t line;
+    ssize_t position;
+    bool pushed;
+    char push;
+};
+
+void lexer_init(Lexer*, FILE*);
+Token lexer_token_next(Lexer*);
 
 #endif // MONKEY_LEXER_H_

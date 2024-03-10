@@ -1,253 +1,243 @@
 #include <stdbool.h>
-#include <stdlib.h>
+#include <string.h>
 
 #include "monkey/expression.h"
-#include "monkey/lexer.h"
 #include "monkey/parser.h"
 #include "monkey/program.h"
+#include "monkey/statement.h"
 #include "monkey/string.h"
-#include "monkey/token.h"
 
-Parser* parser_init(FILE* file)
+void parser_init(Parser* parser, FILE* file)
 {
-    Parser* parser = (Parser*)malloc(sizeof(Parser));
-    parser->file = file;
-    parser->token = token_init();
-    parser->token_next = token_init();
-    lexer_next(file, parser->token);
-    lexer_next(file, parser->token_next);
-    return parser;
+    lexer_init(&parser->lexer, file);
+    token_init(&parser->token);
+    parser->token_next = lexer_token_next(&parser->lexer);
+    parser->errors.head = NULL;
+    parser->errors.tail = NULL;
 }
 
 void parser_free(Parser* parser)
 {
-    token_free(parser->token);
-    token_free(parser->token_next);
-    free(parser);
+    token_free(&parser->token);
+    errors_free(&parser->errors);
 }
 
-void parser_next(Parser* parser)
+bool parser_next(Parser* parser)
 {
-    token_copy(parser->token, parser->token_next);
-    lexer_next(parser->file, parser->token_next);
+    token_free(&parser->token);
+    parser->token = parser->token_next;
+    parser->token_next = lexer_token_next(&parser->lexer);
+    return parser->token.type != TOKEN_END && parser->token.type != TOKEN_ILLEGAL;
 }
 
-Expression* parser_parse_identifier(Parser* parser)
+bool parser_parse_integer(Parser* parser, Expression* expression)
 {
-    Expression* expression = expression_init(EXPRESSION_IDENTIFIER);
-    expression->identifier.value = string_copy(parser->token->lexeme);
-    return expression;
+    expression->type = EXPRESSION_INTEGER;
+    expression->integer.value = atoi(parser->token.lexeme.value);
+    return true;
 }
 
-Expression* parser_parse_integer(Parser* parser)
+bool parser_parse_bool(Parser* parser, Expression* expression)
 {
-    Expression* expression = expression_init(EXPRESSION_INTEGER);
-    expression->integer.value = atoi(parser->token->lexeme);
-    return expression;
+    expression->type = EXPRESSION_BOOL;
+    expression->boolean.value = parser->token.type == TOKEN_TRUE;
+    return true;
 }
 
-Expression* parser_parse_string(Parser* parser)
+bool parser_parse_string(Parser* parser, Expression* expression)
 {
-    Expression* expression = expression_init(EXPRESSION_STRING);
-    expression->string.value = string_copy(parser->token->lexeme);
-    return expression;
+    expression->type = EXPRESSION_STRING;
+    string_copy(&expression->string.value, &parser->token.lexeme);
+    return true;
 }
 
-Expression* parser_parse_bool(Parser* parser)
+bool parser_parse_identifier(Parser* parser, Expression* expression)
 {
-    Expression* expression = expression_init(EXPRESSION_BOOL);
-    expression->boolean.value = parser->token->type == TOKEN_TRUE;
-    return expression;
+    expression->type = EXPRESSION_IDENTIFIER;
+    string_copy(&expression->identifier.value, &parser->token.lexeme);
+    return true;
 }
 
-Expression* parser_parse_expression(Parser*, Precedence);
+bool parser_parse_expression(Parser*, Expression*, Precedence);
 
-Expression* parser_parse_prefix_expression(Parser* parser, Operation operation)
+bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Operation operation)
 {
-    parser_next(parser);
-    Expression* expression = expression_init(EXPRESSION_PREFIX);
+    expression->type = EXPRESSION_PREFIX;
     expression->prefix.operation = operation;
-    expression->prefix.operand = parser_parse_expression(parser, PRECEDENCE_PREFIX);
-    return expression;
-}
+    expression->prefix.operand = (Expression*)malloc(sizeof(Expression));
+    expression->prefix.operand->type = EXPRESSION_NONE;
 
-Expression* parser_parse_expression_left(Parser* parser)
-{
-    switch (parser->token->type) {
-    case TOKEN_IDENTIFIER:
-        return parser_parse_identifier(parser);
-    case TOKEN_INTEGER:
-        return parser_parse_integer(parser);
-    case TOKEN_STRING:
-        return parser_parse_string(parser);
-    case TOKEN_TRUE:
-    case TOKEN_FALSE:
-        return parser_parse_bool(parser);
-    case TOKEN_MINUS:
-        return parser_parse_prefix_expression(parser, OPERATION_NEGATIVE);
-    case TOKEN_NOT:
-        return parser_parse_prefix_expression(parser, OPERATION_NOT);
-    default:
-        return NULL;
-    }
-}
-
-bool parser_parse_infix_operation(Parser* parser, Operation* operation)
-{
-    switch (parser->token_next->type) {
-    case TOKEN_EQUAL:
-        *operation = OPERATION_EQUAL;
-        break;
-    case TOKEN_NOT_EQUAL:
-        *operation = OPERATION_NOT_EQUAL;
-        break;
-    case TOKEN_LESS:
-        *operation = OPERATION_LESS;
-        break;
-    case TOKEN_LESS_EQUAL:
-        *operation = OPERATION_LESS_EQUAL;
-        break;
-    case TOKEN_GREATER:
-        *operation = OPERATION_GREATER;
-        break;
-    case TOKEN_GREATER_EQUAL:
-        *operation = OPERATION_GREATER_EQUAL;
-        break;
-    case TOKEN_PLUS:
-        *operation = OPERATION_ADD;
-        break;
-    case TOKEN_MINUS:
-        *operation = OPERATION_SUBTRACT;
-        break;
-    case TOKEN_DIVIDE:
-        *operation = OPERATION_DIVIDE;
-        break;
-    case TOKEN_MULTIPLY:
-        *operation = OPERATION_MULTIPLY;
-        break;
-    default:
+    parser_next(parser);
+    if (!parser_parse_expression(parser, expression->prefix.operand, PRECEDENCE_PREFIX)) {
         return false;
     }
     return true;
 }
 
-Expression* parser_parse_expression_right(Parser* parser, Expression* expression_left, Precedence precedence_min)
+bool parser_parse_expression_left(Parser* parser, Expression* expression)
+{
+    switch (parser->token.type) {
+    case TOKEN_IDENTIFIER:
+        return parser_parse_identifier(parser, expression);
+    case TOKEN_INTEGER:
+        return parser_parse_integer(parser, expression);
+    case TOKEN_STRING:
+        return parser_parse_string(parser, expression);
+    case TOKEN_TRUE:
+    case TOKEN_FALSE:
+        return parser_parse_bool(parser, expression);
+    case TOKEN_MINUS:
+        return parser_parse_prefix_expression(parser, expression, OPERATION_NEGATIVE);
+    case TOKEN_NOT:
+        return parser_parse_prefix_expression(parser, expression, OPERATION_NOT);
+    default:
+        errors_append(&parser->errors, ERROR_TOKEN_UNEXPECTED, &parser->token);
+        return false;
+    }
+}
+
+Operation parser_parse_infix_operation(Parser* parser)
+{
+    switch (parser->token_next.type) {
+    case TOKEN_EQUAL:
+        return OPERATION_EQUAL;
+    case TOKEN_NOT_EQUAL:
+        return OPERATION_NOT_EQUAL;
+    case TOKEN_LESS:
+        return OPERATION_LESS;
+    case TOKEN_LESS_EQUAL:
+        return OPERATION_LESS_EQUAL;
+    case TOKEN_GREATER:
+        return OPERATION_GREATER;
+    case TOKEN_GREATER_EQUAL:
+        return OPERATION_GREATER_EQUAL;
+    case TOKEN_PLUS:
+        return OPERATION_ADD;
+    case TOKEN_MINUS:
+        return OPERATION_SUBTRACT;
+    case TOKEN_DIVIDE:
+        return OPERATION_DIVIDE;
+    case TOKEN_MULTIPLY:
+        return OPERATION_MULTIPLY;
+    default:
+        return OPERATION_NONE;
+    }
+}
+
+bool parser_parse_expression_right(Parser* parser, Expression* expression, Precedence precedence_min)
 {
     while (true) {
-        Operation operation;
-        if (!parser_parse_infix_operation(parser, &operation)) {
-            return expression_left;
+        Operation operation = parser_parse_infix_operation(parser);
+        if (operation == OPERATION_NONE) {
+            return true;
         }
 
         Precedence precedence = operation_precedence(operation);
         if (precedence <= precedence_min) {
-            return expression_left;
+            return true;
         }
 
-        parser_next(parser);
-        parser_next(parser);
-        Expression* expression_right = parser_parse_expression(parser, precedence);
-        if (expression_right == NULL) {
-            expression_free(expression_left);
-            return NULL;
-        }
+        Expression* expression_left = (Expression*)malloc(sizeof(Expression));
+        memcpy(expression_left, expression, sizeof(Expression));
 
-        Expression* expression = expression_init(EXPRESSION_INFIX);
+        expression->type = EXPRESSION_INFIX;
         expression->infix.operand[0] = expression_left;
-        expression->infix.operand[1] = expression_right;
+        expression->infix.operand[1] = (Expression*)malloc(sizeof(Expression));
+        expression->infix.operand[1]->type = EXPRESSION_NONE;
         expression->infix.operation = operation;
-        expression_left = expression;
+
+        parser_next(parser);
+        parser_next(parser);
+        if (!parser_parse_expression(parser, expression->infix.operand[1], precedence)) {
+            return false;
+        }
     }
 }
 
-Expression* parser_parse_expression(Parser* parser, Precedence precedence)
+bool parser_parse_expression(Parser* parser, Expression* expression, Precedence precedence)
 {
-    Expression* expression;
-    expression = parser_parse_expression_left(parser);
-    if (expression == NULL) {
-        return NULL;
+    if (!parser_parse_expression_left(parser, expression)) {
+        return false;
+    } else if (!parser_parse_expression_right(parser, expression, precedence)) {
+        return false;
     }
-    expression = parser_parse_expression_right(parser, expression, precedence);
-    if (expression == NULL) {
-        return NULL;
-    }
-    return expression;
+    return true;
 }
 
-Statement* parser_parse_let_statement(Parser* parser)
+bool parser_parse_let_statement(Parser* parser, Statement* statement)
 {
     parser_next(parser);
-    if (parser->token->type != TOKEN_IDENTIFIER) {
-        return NULL;
+    if (parser->token.type != TOKEN_IDENTIFIER) {
+        errors_append(&parser->errors, ERROR_LET_TOKEN_IDENTIFIER, &parser->token);
+        return false;
     }
 
-    char* identifier = string_copy(parser->token->lexeme);
-
-    parser_next(parser);
-    if (parser->token->type != TOKEN_ASSIGN) {
-        free(identifier);
-        return NULL;
-    }
+    statement->identifier = (String*)malloc(sizeof(String));
+    string_copy(statement->identifier, &parser->token.lexeme);
 
     parser_next(parser);
-    Expression* expression = parser_parse_expression(parser, PRECEDENCE_LOWEST);
-    if (expression == NULL) {
-        free(identifier);
-        return NULL;
+    if (parser->token.type != TOKEN_ASSIGN) {
+        errors_append(&parser->errors, ERROR_LET_TOKEN_ASSIGN, &parser->token);
+        return false;
     }
-    if (parser->token_next->type == TOKEN_SEMICOLON) {
+
+    parser_next(parser);
+    if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
+        return false;
+    } else if (parser->token_next.type == TOKEN_SEMICOLON) {
         parser_next(parser);
     }
-
-    return statement_init(STATEMENT_LET, identifier, expression);
+    return true;
 }
 
-Statement* parser_parse_return_statement(Parser* parser)
+bool parser_parse_return_statement(Parser* parser, Statement* statement)
 {
     parser_next(parser);
-    Expression* expression = parser_parse_expression(parser, PRECEDENCE_LOWEST);
-    if (expression == NULL) {
-        return NULL;
-    }
-    if (parser->token_next->type == TOKEN_SEMICOLON) {
+    if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
+        return false;
+    } else if (parser->token_next.type == TOKEN_SEMICOLON) {
         parser_next(parser);
     }
-    return statement_init(STATEMENT_RETURN, NULL, expression);
+    return true;
 }
 
-Statement* parser_parse_expression_statement(Parser* parser)
+bool parser_parse_expression_statement(Parser* parser, Statement* statement)
 {
-    Expression* expression = parser_parse_expression(parser, PRECEDENCE_LOWEST);
-    if (expression == NULL) {
-        return NULL;
-    }
-    if (parser->token_next->type == TOKEN_SEMICOLON) {
+    if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
+        return false;
+    } else if (parser->token_next.type == TOKEN_SEMICOLON) {
         parser_next(parser);
     }
-    return statement_init(STATEMENT_EXPRESSION, NULL, expression);
+    return true;
 }
 
-Statement* parser_parse_statement(Parser* parser)
+bool parser_parse_statement(Parser* parser, Statement* statement)
 {
-    switch (parser->token->type) {
-    case TOKEN_LET:
-        return parser_parse_let_statement(parser);
-    case TOKEN_RETURN:
-        return parser_parse_return_statement(parser);
-    default:
-        return parser_parse_expression_statement(parser);
+    if (parser->token.type == TOKEN_LET) {
+        statement->type = STATEMENT_LET;
+        return parser_parse_let_statement(parser, statement);
+    } else if (parser->token.type == TOKEN_RETURN) {
+        statement->type = STATEMENT_RETURN;
+        return parser_parse_return_statement(parser, statement);
+    } else {
+        statement->type = STATEMENT_EXPRESSION;
+        return parser_parse_expression_statement(parser, statement);
     }
 }
 
 bool parser_parse_program(Parser* parser, Program* program)
 {
-    while (parser->token->type != TOKEN_END) {
-        Statement* statement = parser_parse_statement(parser);
-        if (statement == NULL) {
-            return false;
+    while (parser_next(parser)) {
+        Statement statement;
+        statement_init(&statement);
+        if (parser_parse_statement(parser, &statement)) {
+            program_extend(program, statement);
+        } else {
+            statement_free(&statement);
         }
-        program_extend(program, statement);
-        parser_next(parser);
     }
-    return true;
+    if (parser->token.type == TOKEN_ILLEGAL) {
+        errors_append(&parser->errors, ERROR_TOKEN_ILLEGAL, &parser->token);
+    }
+    return parser->errors.head == NULL;
 }
