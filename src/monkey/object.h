@@ -5,6 +5,7 @@
 
 typedef enum ObjectType ObjectType;
 enum ObjectType {
+    OBJECT_NULL,
     OBJECT_INTEGER,
     OBJECT_STRING,
     OBJECT_BOOL,

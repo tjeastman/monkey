@@ -17,6 +17,9 @@ void object_copy(Object* object, const Object* source)
 void object_print(Object* object)
 {
     switch (object->type) {
+    case OBJECT_NULL:
+        printf("NULL\n");
+        break;
     case OBJECT_BOOL:
         printf("bool: %s\n", object->boolean ? "true" : "false");
         break;
