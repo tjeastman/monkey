@@ -74,6 +74,20 @@ bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Oper
     return true;
 }
 
+bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
+{
+    parser_next((parser));
+    if (!parser_parse_expression(parser, expression, PRECEDENCE_LOWEST)) {
+        return false;
+    } else if (parser->token_next.type == TOKEN_RIGHT_PAREN) {
+        parser_next(parser);
+    } else {
+        errors_append(&parser->errors, ERROR_EXPRESSION_GROUP_EXPECTED_PAREN, &parser->token);
+        return false;
+    }
+    return true;
+}
+
 bool parser_parse_expression_left(Parser* parser, Expression* expression)
 {
     switch (parser->token.type) {
@@ -90,6 +104,8 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
         return parser_parse_prefix_expression(parser, expression, OPERATION_NEGATIVE);
     case TOKEN_NOT:
         return parser_parse_prefix_expression(parser, expression, OPERATION_NOT);
+    case TOKEN_LEFT_PAREN:
+        return parser_parse_grouped_expression(parser, expression);
     default:
         errors_append(&parser->errors, ERROR_TOKEN_UNEXPECTED, &parser->token);
         return false;

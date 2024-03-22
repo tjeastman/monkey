@@ -47,6 +47,9 @@ void error_print(Error* error)
     case ERROR_TOKEN_UNEXPECTED:
         printf("unexpected token: %s\n", error->token.lexeme.value);
         break;
+    case ERROR_EXPRESSION_GROUP_EXPECTED_PAREN:
+        printf("expected closing parenthesis in grouped expression\n");
+        break;
     }
 }
 
