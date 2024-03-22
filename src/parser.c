@@ -79,12 +79,77 @@ bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
     parser_next(parser);
     if (!parser_parse_expression(parser, expression, PRECEDENCE_LOWEST)) {
         return false;
-    } else if (parser->token_next.type == TOKEN_RIGHT_PAREN) {
-        parser_next(parser);
-    } else {
+    } else if (parser->token_next.type != TOKEN_RIGHT_PAREN) {
         errors_append(&parser->errors, ERROR_EXPRESSION_GROUP_EXPECTED_PAREN, &parser->token);
         return false;
     }
+    parser_next(parser);
+    return true;
+}
+
+bool parser_parse_block_expression(Parser* parser, Expression* expression)
+{
+    parser_next(parser);
+    if (parser->token.type != TOKEN_LEFT_BRACE) {
+        errors_append(&parser->errors, ERROR_EXPRESSION_BLOCK_EXPECTED_LEFT_BRACE, &parser->token);
+        return false;
+    }
+
+    parser_next(parser);
+    if (!parser_parse_expression(parser, expression, PRECEDENCE_LOWEST)) {
+        return false;
+    }
+
+    parser_next(parser);
+    if (parser->token.type != TOKEN_RIGHT_BRACE) {
+        errors_append(&parser->errors, ERROR_EXPRESSION_BLOCK_EXPECTED_RIGHT_BRACE, &parser->token);
+        return false;
+    }
+
+    return true;
+}
+
+bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
+{
+    parser_next(parser);
+    if (parser->token.type != TOKEN_LEFT_PAREN) {
+        errors_append(&parser->errors, ERROR_EXPRESSION_IF_EXPECTED_LEFT_PAREN, &parser->token);
+        return false;
+    }
+
+    expression->type = EXPRESSION_CONDITIONAL;
+    expression->conditional.condition = (Expression*)malloc(sizeof(Expression));
+    expression->conditional.consequence = NULL;
+    expression->conditional.alternate = NULL;
+
+    parser_next(parser);
+    if (!parser_parse_expression(parser, expression->conditional.condition, PRECEDENCE_LOWEST)) {
+        return false;
+    }
+
+    parser_next(parser);
+    if (parser->token.type != TOKEN_RIGHT_PAREN) {
+        errors_append(&parser->errors, ERROR_EXPRESSION_IF_EXPECTED_RIGHT_PAREN, &parser->token);
+        return false;
+    }
+
+    expression->conditional.consequence = (Expression*)malloc(sizeof(Expression));
+    expression->conditional.consequence->type = EXPRESSION_NONE;
+
+    if (!parser_parse_block_expression(parser, expression->conditional.consequence)) {
+        return false;
+    } else if (parser->token_next.type != TOKEN_ELSE) {
+        return true;
+    }
+    parser_next(parser);
+
+    expression->conditional.alternate = (Expression*)malloc(sizeof(Expression));
+    expression->conditional.alternate->type = EXPRESSION_NONE;
+
+    if (!parser_parse_block_expression(parser, expression->conditional.alternate)) {
+        return false;
+    }
+
     return true;
 }
 
@@ -106,6 +171,8 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
         return parser_parse_prefix_expression(parser, expression, OPERATION_NOT);
     case TOKEN_LEFT_PAREN:
         return parser_parse_grouped_expression(parser, expression);
+    case TOKEN_IF:
+        return parser_parse_conditional_expression(parser, expression);
     default:
         errors_append(&parser->errors, ERROR_TOKEN_UNEXPECTED, &parser->token);
         return false;

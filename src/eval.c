@@ -193,6 +193,27 @@ bool evaluate_infix_expression(Environment* environment, InfixExpression* expres
     }
 }
 
+bool evaluate_conditional_expression(Environment* environment, ConditionalExpression* expression, Object* object)
+{
+    if (!evaluate_expression(environment, expression->condition, object)) {
+        return false;
+    } else if (object->type != OBJECT_BOOL) {
+        printf("*** EVALUATION ERROR: non-bool result in conditional expression\n");
+        return false;
+    }
+
+    bool result = object->boolean;
+    if (!result && expression->alternate == NULL) {
+        object->type = OBJECT_NULL;
+        return true;
+    } else if (!result && !evaluate_expression(environment, expression->alternate, object)) {
+        return false;
+    } else if (result && !evaluate_expression(environment, expression->consequence, object)) {
+        return false;
+    }
+    return true;
+}
+
 bool evaluate_expression(Environment* environment, Expression* expression, Object* object)
 {
     switch (expression->type) {
@@ -208,6 +229,8 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
         return evaluate_prefix_expression(environment, &expression->prefix, object);
     case EXPRESSION_INFIX:
         return evaluate_infix_expression(environment, &expression->infix, object);
+    case EXPRESSION_CONDITIONAL:
+        return evaluate_conditional_expression(environment, &expression->conditional, object);
     default:
         printf("*** EVALUATION ERROR: unexpected expression type\n");
         return false;

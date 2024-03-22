@@ -21,6 +21,17 @@ void expression_free(Expression* expression)
         free(expression->infix.operand[0]);
         expression_free(expression->infix.operand[1]);
         free(expression->infix.operand[1]);
+    } else if (expression->type == EXPRESSION_CONDITIONAL) {
+        expression_free(expression->conditional.condition);
+        free(expression->conditional.condition);
+        if (expression->conditional.consequence != NULL) {
+            expression_free(expression->conditional.consequence);
+            free(expression->conditional.consequence);
+        }
+        if (expression->conditional.alternate != NULL) {
+            expression_free(expression->conditional.alternate);
+            free(expression->conditional.alternate);
+        }
     }
 }
 
@@ -63,6 +74,23 @@ void expression_print_infix(InfixExpression expression)
     putchar(')');
 }
 
+void expression_print_conditional(ConditionalExpression expression)
+{
+    printf("if (");
+    expression_print(expression.condition);
+    printf(")");
+    if (expression.consequence != NULL) {
+        printf(" { ");
+        expression_print(expression.consequence);
+        printf(" }");
+    }
+    if (expression.alternate != NULL) {
+        printf(" else { ");
+        expression_print(expression.alternate);
+        printf(" }");
+    }
+}
+
 void expression_print(Expression* expression)
 {
     switch (expression->type) {
@@ -85,6 +113,9 @@ void expression_print(Expression* expression)
         break;
     case EXPRESSION_INFIX:
         expression_print_infix(expression->infix);
+        break;
+    case EXPRESSION_CONDITIONAL:
+        expression_print_conditional(expression->conditional);
         break;
     }
 }

@@ -50,6 +50,18 @@ void error_print(Error* error)
     case ERROR_EXPRESSION_GROUP_EXPECTED_PAREN:
         printf("expected closing parenthesis in grouped expression\n");
         break;
+    case ERROR_EXPRESSION_IF_EXPECTED_LEFT_PAREN:
+        printf("expected opening left parenthesis in conditional expression\n");
+        break;
+    case ERROR_EXPRESSION_IF_EXPECTED_RIGHT_PAREN:
+        printf("expected closing right parenthesis in conditional expression\n");
+        break;
+    case ERROR_EXPRESSION_BLOCK_EXPECTED_LEFT_BRACE:
+        printf("expected opening left brace in conditional expression\n");
+        break;
+    case ERROR_EXPRESSION_BLOCK_EXPECTED_RIGHT_BRACE:
+        printf("expected opening right brace in conditional expression\n");
+        break;
     }
 }
 
