@@ -20,6 +20,7 @@ struct Object {
     };
 };
 
+void object_copy(Object*, const Object*);
 void object_print(Object*);
 
 #endif // MONKEY_OBJECT_H_

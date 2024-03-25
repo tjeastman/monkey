@@ -2,31 +2,36 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "monkey/environment.h"
 #include "monkey/expression.h"
 #include "monkey/object.h"
 #include "monkey/program.h"
 #include "monkey/statement.h"
 
-bool evaluate_identifier_expression(IdentifierExpression* expression, Object* object)
+bool evaluate_identifier_expression(Environment* environment, IdentifierExpression* expression, Object* object)
 {
-    return false;
+    if (!environment_retrieve(environment, &expression->value, object)) {
+        printf("*** EVALUATION ERROR: missing variable: %s\n", expression->value.value);
+        return false;
+    }
+    return true;
 }
 
-bool evaluate_integer_expression(IntegerExpression* expression, Object* object)
+bool evaluate_integer_expression(Environment* environment, IntegerExpression* expression, Object* object)
 {
     object->type = OBJECT_INTEGER;
     object->integer = expression->value;
     return true;
 }
 
-bool evaluate_string_expression(StringExpression* expression, Object* object)
+bool evaluate_string_expression(Environment* environment, StringExpression* expression, Object* object)
 {
     object->type = OBJECT_STRING;
     object->string = expression->value.value;
     return true;
 }
 
-bool evaluate_bool_expression(BooleanExpression* expression, Object* object)
+bool evaluate_bool_expression(Environment* environment, BooleanExpression* expression, Object* object)
 {
     object->type = OBJECT_BOOL;
     object->boolean = expression->value;
@@ -36,6 +41,7 @@ bool evaluate_bool_expression(BooleanExpression* expression, Object* object)
 bool evaluate_prefix_negative_operation(Object* object)
 {
     if (object->type != OBJECT_INTEGER) {
+        printf("*** EVALUATION ERROR: unary - operation applied to non-integer value\n");
         return false;
     }
     object->integer *= -1;
@@ -45,23 +51,27 @@ bool evaluate_prefix_negative_operation(Object* object)
 bool evaluate_prefix_not_operation(Object* object)
 {
     if (object->type != OBJECT_BOOL) {
+        printf("*** EVALUATION ERROR: unary ! operation applied to non-bool value\n");
         return false;
     }
     object->boolean = !object->boolean;
     return true;
 }
 
-bool evaluate_expression(Expression*, Object*);
+bool evaluate_expression(Environment*, Expression*, Object*);
 
-bool evaluate_prefix_expression(PrefixExpression* expression, Object* object)
+bool evaluate_prefix_expression(Environment* environment, PrefixExpression* expression, Object* object)
 {
-    if (!evaluate_expression(expression->operand, object)) {
+    if (!evaluate_expression(environment, expression->operand, object)) {
         return false;
     } else if (expression->operation == OPERATION_NEGATIVE) {
         return evaluate_prefix_negative_operation(object);
     } else if (expression->operation == OPERATION_NOT) {
         return evaluate_prefix_not_operation(object);
     }
+    printf("*** EVALUATION ERROR: unrecognized prefix operation: ");
+    operation_print(expression->operation);
+    putchar('\n');
     return false;
 }
 
@@ -83,6 +93,9 @@ bool evaluate_infix_comparison_operation(Operation operation, Object* object, Ob
     if (operation == OPERATION_NOT_EQUAL) {
         result = !result;
     } else if (operation != OPERATION_EQUAL) {
+        printf("*** EVALUATION ERROR: unrecognized infix comparison operation: ");
+        operation_print(operation);
+        putchar('\n');
         return false;
     }
 
@@ -94,8 +107,14 @@ bool evaluate_infix_comparison_operation(Operation operation, Object* object, Ob
 bool evaluate_infix_inequality_operation(Operation operation, Object* object, Object* object_right)
 {
     if (object->type != OBJECT_INTEGER) {
+        printf("*** EVALUATION ERROR: expected integer type for infix operation: ");
+        operation_print(operation);
+        putchar('\n');
         return false;
     } else if (object->type != object_right->type) {
+        printf("*** EVALUATION ERROR: mismatched types for infix operation: ");
+        operation_print(operation);
+        putchar('\n');
         return false;
     }
 
@@ -109,6 +128,9 @@ bool evaluate_infix_inequality_operation(Operation operation, Object* object, Ob
     } else if (operation == OPERATION_LESS_EQUAL) {
         result = object->integer <= object_right->integer;
     } else {
+        printf("*** EVALUATION ERROR: unrecognized infix inequality operation: ");
+        operation_print(operation);
+        putchar('\n');
         return false;
     }
 
@@ -120,8 +142,14 @@ bool evaluate_infix_inequality_operation(Operation operation, Object* object, Ob
 bool evaluate_infix_arithmetic_operation(Operation operation, Object* object, Object* object_right)
 {
     if (object->type != OBJECT_INTEGER) {
+        printf("*** EVALUATION ERROR: expected integer type for infix operation: ");
+        operation_print(operation);
+        putchar('\n');
         return false;
     } else if (object->type != object_right->type) {
+        printf("*** EVALUATION ERROR: mismatched types for infix operation: ");
+        operation_print(operation);
+        putchar('\n');
         return false;
     } else if (operation == OPERATION_ADD) {
         object->integer += object_right->integer;
@@ -137,12 +165,12 @@ bool evaluate_infix_arithmetic_operation(Operation operation, Object* object, Ob
     return true;
 }
 
-bool evaluate_infix_expression(InfixExpression* expression, Object* object)
+bool evaluate_infix_expression(Environment* environment, InfixExpression* expression, Object* object)
 {
     Object object_right;
-    if (!evaluate_expression(expression->operand[1], &object_right)) {
+    if (!evaluate_expression(environment, expression->operand[1], &object_right)) {
         return false;
-    } else if (!evaluate_expression(expression->operand[0], object)) {
+    } else if (!evaluate_expression(environment, expression->operand[0], object)) {
         return false;
     }
 
@@ -165,55 +193,66 @@ bool evaluate_infix_expression(InfixExpression* expression, Object* object)
     }
 }
 
-bool evaluate_expression(Expression* expression, Object* object)
+bool evaluate_expression(Environment* environment, Expression* expression, Object* object)
 {
     switch (expression->type) {
     case EXPRESSION_IDENTIFIER:
-        return evaluate_identifier_expression(&expression->identifier, object);
+        return evaluate_identifier_expression(environment, &expression->identifier, object);
     case EXPRESSION_INTEGER:
-        return evaluate_integer_expression(&expression->integer, object);
+        return evaluate_integer_expression(environment, &expression->integer, object);
     case EXPRESSION_STRING:
-        return evaluate_string_expression(&expression->string, object);
+        return evaluate_string_expression(environment, &expression->string, object);
     case EXPRESSION_BOOL:
-        return evaluate_bool_expression(&expression->boolean, object);
+        return evaluate_bool_expression(environment, &expression->boolean, object);
     case EXPRESSION_PREFIX:
-        return evaluate_prefix_expression(&expression->prefix, object);
+        return evaluate_prefix_expression(environment, &expression->prefix, object);
     case EXPRESSION_INFIX:
-        return evaluate_infix_expression(&expression->infix, object);
+        return evaluate_infix_expression(environment, &expression->infix, object);
     default:
+        printf("*** EVALUATION ERROR: unexpected expression type\n");
         return false;
     }
 }
 
-void evaluate_expression_statement(Statement* statement)
+void evaluate_expression_statement(Environment* environment, Statement* statement)
 {
     Object object;
-    if (evaluate_expression(&statement->expression, &object)) {
+    if (evaluate_expression(environment, &statement->expression, &object)) {
         object_print(&object);
-    } else {
-        printf("ERROR\n");
     }
 }
 
-void evaluate_statement(Statement* statement)
+void evaluate_let_statement(Environment* environment, Statement* statement)
+{
+    Object object;
+    if (evaluate_expression(environment, &statement->expression, &object)) {
+        environment_insert(environment, statement->identifier, &object);
+    }
+}
+
+void evaluate_statement(Environment* environment, Statement* statement)
 {
     bool result;
     switch (statement->type) {
     case STATEMENT_LET:
+        evaluate_let_statement(environment, statement);
         return;
     case STATEMENT_RETURN:
         return;
     case STATEMENT_EXPRESSION:
-        evaluate_expression_statement(statement);
+        evaluate_expression_statement(environment, statement);
         return;
-    default:
-        printf("default\n");
+    case STATEMENT_NONE:
+        printf("*** EVALUATION ERROR: unexpected statement type\n");
     }
 }
 
 void evaluate_program(Program* program)
 {
+    Environment environment;
+    environment_init(&environment);
     for (size_t i = 0; i < program->length; ++i) {
-        evaluate_statement(&program->statements[i]);
+        evaluate_statement(&environment, &program->statements[i]);
     }
+    environment_free(&environment);
 }

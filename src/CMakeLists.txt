@@ -14,6 +14,8 @@ add_executable(
   error.c
   object.c
   eval.c
+  hash.c
+  environment.c
 )
 
 set_property(TARGET main PROPERTY C_STANDARD 17)

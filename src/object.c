@@ -2,6 +2,18 @@
 
 #include "monkey/object.h"
 
+void object_copy(Object* object, const Object* source)
+{
+    object->type = source->type;
+    if (source->type == OBJECT_BOOL) {
+        object->boolean = source->boolean;
+    } else if (source->type == OBJECT_INTEGER) {
+        object->integer = source->integer;
+    } else if (source->type == OBJECT_STRING) {
+        object->string = source->string;
+    }
+}
+
 void object_print(Object* object)
 {
     switch (object->type) {
