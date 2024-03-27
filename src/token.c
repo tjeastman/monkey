@@ -24,7 +24,7 @@ void token_reset(Token* token)
     string_reset(&token->lexeme);
 }
 
-void token_copy(Token* destination, Token* source)
+void token_copy(Token* destination, const Token* source)
 {
     destination->type = source->type;
     destination->line = source->line;
@@ -32,7 +32,7 @@ void token_copy(Token* destination, Token* source)
     string_copy(&destination->lexeme, &source->lexeme);
 }
 
-void token_print(Token* token)
+void token_print(const Token* token)
 {
     switch (token->type) {
     case TOKEN_NONE:

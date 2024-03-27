@@ -59,7 +59,7 @@ struct Token {
 void token_init(Token*);
 void token_free(Token*);
 void token_reset(Token*);
-void token_copy(Token*, Token*);
-void token_print(Token*);
+void token_copy(Token*, const Token*);
+void token_print(const Token*);
 
 #endif // MONKEY_TOKEN_H_
