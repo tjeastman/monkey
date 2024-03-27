@@ -64,5 +64,8 @@ void operation_print(Operation operation)
     case OPERATION_NEGATIVE:
         printf("-");
         break;
+    case OPERATION_NONE:
+        printf("[NOP]");
+        break;
     }
 }
