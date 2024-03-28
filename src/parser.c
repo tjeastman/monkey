@@ -76,7 +76,7 @@ bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Oper
 
 bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
 {
-    parser_next((parser));
+    parser_next(parser);
     if (!parser_parse_expression(parser, expression, PRECEDENCE_LOWEST)) {
         return false;
     } else if (parser->token_next.type == TOKEN_RIGHT_PAREN) {
