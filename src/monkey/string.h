@@ -14,8 +14,9 @@ struct String {
 void string_init(String*);
 void string_free(const String*);
 void string_reset(String*);
-void string_append(String*, char);
-void string_copy(String*, const String*);
+bool string_append(String*, char);
+bool string_concatenate(String*, const String*);
+bool string_copy(String*, const String*);
 bool string_equal(const String*, const String*);
 void string_print(const String*);
 

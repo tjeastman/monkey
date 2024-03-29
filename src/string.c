@@ -27,7 +27,7 @@ void string_reset(String* string)
     string->position = 0;
 }
 
-void string_append(String* string, char c)
+bool string_append(String* string, char c)
 {
     if (string->value == NULL) {
         string->value = (char*)malloc(2);
@@ -39,9 +39,20 @@ void string_append(String* string, char c)
         string->size *= 2;
     }
     string->value[string->position++] = c;
+    return true;
 }
 
-void string_copy(String* string, const String* source)
+bool string_concatenate(String* string, const String* string_alt)
+{
+    for (size_t i = 0; i < string_alt->position; ++i) {
+        if (!string_append(string, string_alt->value[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool string_copy(String* string, const String* source)
 {
     string->size = source->size;
     string->position = source->position;
@@ -51,6 +62,7 @@ void string_copy(String* string, const String* source)
         string->value = (char*)malloc(source->size);
         memcpy(string->value, source->value, source->size);
     }
+    return true;
 }
 
 bool string_equal(const String* string, const String* string_alt)

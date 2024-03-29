@@ -104,6 +104,21 @@ bool evaluate_infix_inequality_operation(Operation operation, Object* object, Ob
 
 bool evaluate_infix_arithmetic_operation(Operation operation, Object* object, Object* object_right)
 {
+    if (object->type == OBJECT_STRING) {
+        if (operation != OPERATION_ADD) {
+            printf("*** EVALUATION ERROR: invalid infix operation for string: ");
+            operation_print(operation);
+            putchar('\n');
+            return false;
+        } else if (object->type != object_right->type) {
+            printf("*** EVALUATION ERROR: mismatched types for infix string operation: ");
+            operation_print(operation);
+            putchar('\n');
+            return false;
+        }
+        return string_concatenate(object->string, object_right->string);
+    }
+
     if (object->type != OBJECT_INTEGER) {
         printf("*** EVALUATION ERROR: expected integer type for infix operation: ");
         operation_print(operation);
