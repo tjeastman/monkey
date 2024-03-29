@@ -3,11 +3,11 @@
 #include "monkey/string.h"
 #include "monkey/token.h"
 
-void token_init(Token* token)
+void token_init(Token* token, size_t line, ssize_t position)
 {
     token->type = TOKEN_NONE;
-    token->line = 0;
-    token->position = 0;
+    token->line = line;
+    token->position = position;
     string_init(&token->lexeme);
 }
 
@@ -19,9 +19,12 @@ void token_free(Token* token)
 void token_reset(Token* token)
 {
     token->type = TOKEN_NONE;
-    token->line = 0;
-    token->position = 0;
     string_reset(&token->lexeme);
+}
+
+void token_append(Token* token, char c)
+{
+    string_append(&token->lexeme, c);
 }
 
 void token_copy(Token* destination, const Token* source)

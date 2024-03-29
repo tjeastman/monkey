@@ -10,7 +10,7 @@
 void parser_init(Parser* parser, FILE* file)
 {
     lexer_init(&parser->lexer, file);
-    token_init(&parser->token);
+    token_init(&parser->token, parser->lexer.line, parser->lexer.position);
     parser->token_next = lexer_token_next(&parser->lexer);
     parser->errors.head = NULL;
     parser->errors.tail = NULL;

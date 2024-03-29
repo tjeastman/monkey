@@ -22,9 +22,7 @@ int lexer_pop_char(Lexer* lexer)
     }
 
     int c = fgetc(lexer->file);
-    if (c == EOF) {
-        return c;
-    } else if (c == '\n') {
+    if (c == '\n') {
         lexer->line++;
         lexer->position = -1; // next char after newline is 0
     } else {
@@ -59,7 +57,7 @@ next:
     if ((c = lexer_pop_char(lexer)) != EOF) {
 
     } else if (token->type == TOKEN_NONE || token->type == TOKEN_COMMENT) {
-        token->type = TOKEN_END;
+        lexer_token_start(lexer, token, TOKEN_END);
         return true;
     } else if (token->type == TOKEN_IDENTIFIER) {
         return true;
@@ -132,7 +130,7 @@ next:
         return true;
     }
 
-    string_append(&token->lexeme, c);
+    token_append(token, c);
 
     /*
      * Process the next character for the "look ahead" tokens. Note that the
@@ -242,7 +240,7 @@ next:
 Token lexer_token_next(Lexer* lexer)
 {
     Token token;
-    token_init(&token);
+    token_init(&token, lexer->line, lexer->position);
 
     if (feof(lexer->file)) {
         lexer_token_start(lexer, &token, TOKEN_END);
