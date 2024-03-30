@@ -1,6 +1,8 @@
 #include <stdbool.h>
+#include <stdio.h>
 #include <string.h>
 
+#include "monkey/error.h"
 #include "monkey/expression.h"
 #include "monkey/parser.h"
 #include "monkey/statement.h"
@@ -152,6 +154,118 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
     return true;
 }
 
+bool parser_parse_function_expression_parameters(Parser* parser, FunctionParameter** parameters)
+{
+    FunctionParameter* parameter = NULL;
+
+    parser_next(parser);
+    while (parser->token.type != TOKEN_RIGHT_PAREN) {
+        if (parser->token.type != TOKEN_IDENTIFIER) {
+            errors_append(&parser->errors, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER, &parser->token);
+            return false;
+        }
+
+        if (parameter == NULL) {
+            parameter = (FunctionParameter*)malloc(sizeof(FunctionParameter));
+            *parameters = parameter;
+        } else {
+            parameter->next = (FunctionParameter*)malloc(sizeof(FunctionParameter));
+            parameter = parameter->next;
+        }
+        string_copy(&parameter->name, &parser->token.lexeme);
+        parameter->next = NULL;
+
+        parser_next(parser);
+        if (parser->token.type == TOKEN_RIGHT_PAREN) {
+            break;
+        } else if (parser->token.type == TOKEN_COMMA) {
+            parser_next(parser);
+        } else {
+            errors_append(&parser->errors, ERROR_EXPRESSION_FUNCTION_EXPECTED_COMMA, &parser->token);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool parser_parse_function_expression(Parser* parser, Expression* expression)
+{
+    parser_next(parser);
+    if (parser->token.type != TOKEN_LEFT_PAREN) {
+        errors_append(&parser->errors, ERROR_EXPRESSION_FUNCTION_EXPECTED_LEFT_PAREN, &parser->token);
+        return false;
+    }
+
+    expression->type = EXPRESSION_FUNCTION;
+    expression->function.parameters = NULL;
+    expression->function.body = NULL;
+
+    if (!parser_parse_function_expression_parameters(parser, &expression->function.parameters)) {
+        return false;
+    }
+
+    expression->function.body = (StatementBlock*)malloc(sizeof(StatementBlock));
+    statement_block_init(expression->function.body);
+
+    if (!parser_parse_block_expression(parser, expression->function.body)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool parser_parse_call_expression_arguments(Parser* parser, Expression* expression, FunctionArgument** arguments)
+{
+    FunctionArgument* argument = NULL;
+
+    parser_next(parser);
+    while (parser->token.type != TOKEN_RIGHT_PAREN) {
+        if (argument == NULL) {
+            argument = (FunctionArgument*)malloc(sizeof(FunctionArgument));
+            *arguments = argument;
+        } else {
+            argument->next = (FunctionArgument*)malloc(sizeof(FunctionArgument));
+            argument = argument->next;
+        }
+        argument->next = NULL;
+
+        argument->expression = (Expression*)malloc(sizeof(Expression));
+        argument->expression->type = EXPRESSION_NONE;
+        if (!parser_parse_expression(parser, argument->expression, PRECEDENCE_LOWEST)) {
+            return false;
+        }
+
+        parser_next(parser);
+        if (parser->token.type == TOKEN_RIGHT_PAREN) {
+            break;
+        } else if (parser->token.type == TOKEN_COMMA) {
+            parser_next(parser);
+        } else {
+            errors_append(&parser->errors, ERROR_EXPRESSION_CALL_EXPECTED_COMMA, &parser->token);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool parser_parse_call_expression(Parser* parser, Expression* expression)
+{
+    Expression* function = (Expression*)malloc(sizeof(Expression));
+    memcpy(function, expression, sizeof(Expression));
+
+    expression->type = EXPRESSION_CALL;
+    expression->call.function = function;
+    expression->call.arguments = NULL;
+
+    if (!parser_parse_call_expression_arguments(parser, expression, &expression->call.arguments)) {
+        return false;
+    }
+
+    return true;
+}
+
 bool parser_parse_puts_expression(Parser* parser, Expression* expression)
 {
     parser_next(parser);
@@ -198,6 +312,8 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
         return parser_parse_grouped_expression(parser, expression);
     case TOKEN_IF:
         return parser_parse_conditional_expression(parser, expression);
+    case TOKEN_FUNCTION:
+        return parser_parse_function_expression(parser, expression);
     case TOKEN_PUTS:
         return parser_parse_puts_expression(parser, expression);
     default:
@@ -270,6 +386,13 @@ bool parser_parse_expression(Parser* parser, Expression* expression, Precedence 
         return false;
     } else if (!parser_parse_expression_right(parser, expression, precedence)) {
         return false;
+    }
+
+    if (parser->token_next.type == TOKEN_LEFT_PAREN) {
+        parser_next(parser);
+        if (!parser_parse_call_expression(parser, expression)) {
+            return false;
+        }
     }
     return true;
 }

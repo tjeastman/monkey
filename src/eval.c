@@ -194,21 +194,24 @@ bool evaluate_infix_expression(Environment* environment, InfixExpression* expres
     }
 }
 
-bool evaluate_statement_block(Environment* environment, StatementBlock* block, Object* object)
+bool evaluate_statement_block_aux(Environment* environment, StatementBlock* block, Object* object)
 {
-    environment = environment_push(environment);
-    Statement* statement = block->head;
-    while (statement != NULL) {
+    for (Statement* statement = block->head; statement != NULL; statement = statement->next) {
         if (!evaluate_statement(environment, statement, object)) {
-            environment_pop(environment);
             return false;
         } else if (object->returned) {
             break;
         }
-        statement = statement->next;
     }
-    environment_pop(environment);
     return true;
+}
+
+bool evaluate_statement_block(Environment* environment, StatementBlock* block, Object* object)
+{
+    environment = environment_push(environment);
+    bool result = evaluate_statement_block_aux(environment, block, object);
+    environment_pop(environment);
+    return result;
 }
 
 bool evaluate_conditional_expression(Environment* environment, ConditionalExpression* expression, Object* object)
@@ -229,6 +232,63 @@ bool evaluate_conditional_expression(Environment* environment, ConditionalExpres
     } else if (result && !evaluate_statement_block(environment, expression->consequence, object)) {
         return false;
     }
+    return true;
+}
+
+bool evaluate_function_expression(Environment* environment, FunctionExpression* expression, Object* object)
+{
+    object->type = OBJECT_FUNCTION;
+    object->function = expression;
+    return true;
+}
+
+bool evaluate_call_expression_arguments(Environment* environment, FunctionParameter* parameter, FunctionArgument* argument)
+{
+    if (parameter == NULL && argument == NULL) {
+        return true;
+    } else if (parameter == NULL) {
+        printf("*** EVALUATION ERROR: too many arguments in call expression\n");
+        return false;
+    } else if (argument == NULL) {
+        printf("*** EVALUATION ERROR: not enough arguments in call expression\n");
+        return false;
+    }
+
+    // note need to use "previous" environment
+    Object object;
+    object_init(&object);
+    if (!evaluate_expression(environment->next, argument->expression, &object)) {
+        return false;
+    }
+
+    environment_insert(environment, &parameter->name, &object);
+
+    return evaluate_call_expression_arguments(environment, parameter->next, argument->next);
+}
+
+bool evaluate_call_expression(Environment* environment, CallExpression* expression, Object* object)
+{
+    Object object_fn;
+    object_init(&object_fn);
+    if (!evaluate_expression(environment, expression->function, &object_fn)) {
+        return false;
+    } else if (object_fn.type != OBJECT_FUNCTION) {
+        printf("*** EVALUATION ERROR: non-function object in call expression\n");
+        return false;
+    }
+
+    environment = environment_push(environment);
+    if (!evaluate_call_expression_arguments(environment, object_fn.function->parameters, expression->arguments)) {
+        environment_pop(environment);
+        return false;
+    } else if (!evaluate_statement_block_aux(environment, object_fn.function->body, object)) {
+        environment_pop(environment);
+        return false;
+    } else if (object->returned) {
+        object->returned = false;
+    }
+
+    environment_pop(environment);
     return true;
 }
 
@@ -259,6 +319,10 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
         return evaluate_infix_expression(environment, &expression->infix, object);
     case EXPRESSION_CONDITIONAL:
         return evaluate_conditional_expression(environment, &expression->conditional, object);
+    case EXPRESSION_FUNCTION:
+        return evaluate_function_expression(environment, &expression->function, object);
+    case EXPRESSION_CALL:
+        return evaluate_call_expression(environment, &expression->call, object);
     case EXPRESSION_PUTS:
         return evaluate_puts_expression(environment, &expression->puts, object);
     default:
@@ -311,6 +375,6 @@ void evaluate_program(StatementBlock* block)
     Environment* environment = environment_push(NULL);
     Object object;
     object_init(&object);
-    evaluate_statement_block(environment, block, &object);
+    evaluate_statement_block_aux(environment, block, &object);
     environment_pop(environment);
 }

@@ -18,7 +18,10 @@ void object_copy(Object* object, const Object* source)
         object->integer = source->integer;
     } else if (source->type == OBJECT_STRING) {
         object->string = source->string;
+    } else if (source->type == OBJECT_FUNCTION) {
+        object->function = source->function;
     }
+    object->returned = false;
 }
 
 void object_print(const Object* object)
@@ -35,6 +38,9 @@ void object_print(const Object* object)
         break;
     case OBJECT_STRING:
         printf("string: %s\n", object->string);
+        break;
+    case OBJECT_FUNCTION:
+        printf("function\n");
         break;
     }
 }

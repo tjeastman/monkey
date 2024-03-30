@@ -36,6 +36,45 @@ void expression_free_conditional(const ConditionalExpression* expression)
     }
 }
 
+void expression_free_function_parameters(const FunctionParameter* parameter)
+{
+    string_free(&parameter->name);
+    if (parameter->next != NULL) {
+        expression_free_function_parameters(parameter->next);
+        free(parameter->next);
+    }
+}
+
+void expression_free_function(const FunctionExpression* expression)
+{
+    if (expression->parameters != NULL) {
+        expression_free_function_parameters(expression->parameters);
+        free(expression->parameters);
+    }
+    if (expression->body != NULL) {
+        statement_block_free(expression->body);
+        free(expression->body);
+    }
+}
+
+void expression_free_call_arguments(const FunctionArgument* argument)
+{
+    expression_free(argument->expression);
+    if (argument->next != NULL) {
+        expression_free_call_arguments(argument->next);
+        free(argument->next);
+    }
+}
+
+void expression_free_call(const CallExpression* expression)
+{
+    expression_free(expression->function);
+    if (expression->arguments != NULL) {
+        expression_free_call_arguments(expression->arguments);
+        free(expression->arguments);
+    }
+}
+
 void expression_free(const Expression* expression)
 {
     if (expression->type == EXPRESSION_STRING) {
@@ -48,6 +87,10 @@ void expression_free(const Expression* expression)
         expression_free_infix(&expression->infix);
     } else if (expression->type == EXPRESSION_CONDITIONAL) {
         expression_free_conditional(&expression->conditional);
+    } else if (expression->type == EXPRESSION_FUNCTION) {
+        expression_free_function(&expression->function);
+    } else if (expression->type == EXPRESSION_CALL) {
+        expression_free_call(&expression->call);
     }
 }
 
@@ -107,6 +150,46 @@ void expression_print_conditional(ConditionalExpression expression)
     }
 }
 
+void expression_print_function_parameters(FunctionParameter* parameters)
+{
+    while (parameters != NULL) {
+        string_print(&parameters->name);
+        if (parameters->next != NULL) {
+            printf(", ");
+        }
+        parameters = parameters->next;
+    }
+}
+
+void expression_print_function(FunctionExpression expression)
+{
+    printf("fn(");
+    expression_print_function_parameters(expression.parameters);
+    printf(") {\n    ");
+    statement_block_print(expression.body);
+    putchar('\n');
+    putchar('}');
+}
+
+void expression_print_call_arguments(FunctionArgument* arguments)
+{
+    while (arguments != NULL) {
+        expression_print(arguments->expression);
+        if (arguments->next != NULL) {
+            printf(", ");
+        }
+        arguments = arguments->next;
+    }
+}
+
+void expression_print_call(CallExpression expression)
+{
+    expression_print(expression.function);
+    putchar('(');
+    expression_print_call_arguments(expression.arguments);
+    putchar(')');
+}
+
 void expression_print_puts(PutsExpression expression)
 {
     printf("puts(");
@@ -140,8 +223,13 @@ void expression_print(const Expression* expression)
     case EXPRESSION_CONDITIONAL:
         expression_print_conditional(expression->conditional);
         break;
+    case EXPRESSION_FUNCTION:
+        expression_print_function(expression->function);
+        break;
+    case EXPRESSION_CALL:
+        expression_print_call(expression->call);
+        break;
     case EXPRESSION_PUTS:
         expression_print_puts(expression->puts);
-        break;
     }
 }

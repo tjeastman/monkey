@@ -5,7 +5,7 @@
 #include "monkey/hash.h"
 #include "monkey/object.h"
 
-Environment* environment_push(const Environment* environment_next)
+Environment* environment_push(Environment* environment_next)
 {
     Environment* environment = (Environment*)malloc(sizeof(Environment));
     environment->table = (HashTable*)malloc(sizeof(HashTable));

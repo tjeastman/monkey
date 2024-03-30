@@ -3,12 +3,15 @@
 
 #include <stdbool.h>
 
+#include "monkey/expression.h"
+
 typedef enum ObjectType ObjectType;
 enum ObjectType {
     OBJECT_NULL,
     OBJECT_INTEGER,
     OBJECT_STRING,
     OBJECT_BOOL,
+    OBJECT_FUNCTION,
 };
 
 typedef struct Object Object;
@@ -18,6 +21,7 @@ struct Object {
         int integer;
         char* string;
         bool boolean;
+        FunctionExpression* function;
     };
     bool returned;
 };

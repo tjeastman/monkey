@@ -14,13 +14,14 @@ void statement_init(Statement* statement)
 
 void statement_free(const Statement* statement)
 {
-    if (statement->next != NULL) {
-        statement_free(statement->next);
-    }
     if (statement->identifier != NULL) {
         string_free(statement->identifier);
     }
     expression_free(&statement->expression);
+    if (statement->next != NULL) {
+        statement_free(statement->next);
+        free(statement->next);
+    }
 }
 
 void statement_print(const Statement* statement)
@@ -44,7 +45,10 @@ void statement_block_init(StatementBlock* block)
 
 void statement_block_free(const StatementBlock* block)
 {
-    statement_free(block->head);
+    if (block->head != NULL) {
+        statement_free(block->head);
+        free(block->head);
+    }
 }
 
 void statement_block_extend(StatementBlock* block, const Statement* statement)

@@ -18,6 +18,8 @@ enum ExpressionType {
     EXPRESSION_PREFIX,
     EXPRESSION_INFIX,
     EXPRESSION_CONDITIONAL,
+    EXPRESSION_FUNCTION,
+    EXPRESSION_CALL,
     EXPRESSION_PUTS,
 };
 
@@ -67,6 +69,30 @@ struct PutsExpression {
     Expression* expression;
 };
 
+typedef struct FunctionParameter FunctionParameter;
+struct FunctionParameter {
+    String name;
+    FunctionParameter* next;
+};
+
+typedef struct FunctionExpression FunctionExpression;
+struct FunctionExpression {
+    FunctionParameter* parameters;
+    StatementBlock* body;
+};
+
+typedef struct FunctionArgument FunctionArgument;
+struct FunctionArgument {
+    Expression* expression;
+    FunctionArgument* next;
+};
+
+typedef struct CallExpression CallExpression;
+struct CallExpression {
+    Expression* function;
+    FunctionArgument* arguments;
+};
+
 struct Expression {
     ExpressionType type;
     union {
@@ -77,6 +103,8 @@ struct Expression {
         PrefixExpression prefix;
         InfixExpression infix;
         ConditionalExpression conditional;
+        FunctionExpression function;
+        CallExpression call;
         PutsExpression puts;
     };
 };
