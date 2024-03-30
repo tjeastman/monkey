@@ -17,10 +17,21 @@ struct Statement {
     StatementType type;
     String* identifier;
     Expression expression;
+    Statement* next;
+};
+
+typedef struct StatementBlock StatementBlock;
+struct StatementBlock {
+    Statement* head;
+    Statement* tail;
 };
 
 void statement_init(Statement*);
 void statement_free(const Statement*);
 void statement_print(const Statement*);
+void statement_block_init(StatementBlock*);
+void statement_block_free(const StatementBlock*);
+void statement_block_extend(StatementBlock*, const Statement*);
+void statement_block_print(const StatementBlock*);
 
 #endif // MONKEY_STATEMENT_H_

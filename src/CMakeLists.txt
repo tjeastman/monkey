@@ -10,7 +10,6 @@ add_executable(
   operation.c
   expression.c
   statement.c
-  program.c
   error.c
   object.c
   eval.c

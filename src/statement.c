@@ -9,10 +9,14 @@ void statement_init(Statement* statement)
     statement->type = STATEMENT_NONE;
     statement->identifier = NULL;
     statement->expression.type = EXPRESSION_NONE;
+    statement->next = NULL;
 }
 
 void statement_free(const Statement* statement)
 {
+    if (statement->next != NULL) {
+        statement_free(statement->next);
+    }
     if (statement->identifier != NULL) {
         string_free(statement->identifier);
     }
@@ -30,4 +34,37 @@ void statement_print(const Statement* statement)
     }
     expression_print(&statement->expression);
     printf(";\n");
+}
+
+void statement_block_init(StatementBlock* block)
+{
+    block->head = NULL;
+    block->tail = NULL;
+}
+
+void statement_block_free(const StatementBlock* block)
+{
+    statement_free(block->head);
+}
+
+void statement_block_extend(StatementBlock* block, const Statement* statement)
+{
+    if (block->head == NULL) {
+        block->head = (Statement*)malloc(sizeof(Statement));
+        *block->head = *statement;
+        block->tail = block->head;
+    } else {
+        block->tail->next = (Statement*)malloc(sizeof(Statement));
+        *block->tail->next = *statement;
+        block->tail = block->tail->next;
+    }
+}
+
+void statement_block_print(const StatementBlock* block)
+{
+    Statement* statement = block->head;
+    while (statement != NULL) {
+        statement_print(statement);
+        statement = statement->next;
+    }
 }

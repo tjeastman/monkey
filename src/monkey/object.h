@@ -19,8 +19,10 @@ struct Object {
         char* string;
         bool boolean;
     };
+    bool returned;
 };
 
+void object_init(Object*);
 void object_copy(Object*, const Object*);
 void object_print(const Object*);
 

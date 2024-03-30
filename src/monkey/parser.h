@@ -6,7 +6,7 @@
 
 #include "monkey/error.h"
 #include "monkey/lexer.h"
-#include "monkey/program.h"
+#include "monkey/statement.h"
 #include "monkey/token.h"
 
 typedef struct Parser Parser;
@@ -19,6 +19,8 @@ struct Parser {
 
 void parser_init(Parser*, FILE*);
 void parser_free(Parser*);
-bool parser_parse_program(Parser*, Program*);
+bool parser_parse_expression(Parser*, Expression*, Precedence);
+bool parser_parse_statement(Parser*, Statement*);
+bool parser_parse_program(Parser*, StatementBlock*);
 
 #endif // MONKEY_PARSER_H_

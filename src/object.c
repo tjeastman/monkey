@@ -1,6 +1,13 @@
+#include <stdbool.h>
 #include <stdio.h>
 
 #include "monkey/object.h"
+
+void object_init(Object* object)
+{
+    object->type = OBJECT_NULL;
+    object->returned = false;
+}
 
 void object_copy(Object* object, const Object* source)
 {

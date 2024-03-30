@@ -5,33 +5,49 @@
 #include "monkey/operation.h"
 #include "monkey/string.h"
 
+void statement_block_free(const StatementBlock*);
+void statement_block_print(const StatementBlock*);
+
+void expression_free_prefix(const PrefixExpression* expression)
+{
+    expression_free(expression->operand);
+    free(expression->operand);
+}
+
+void expression_free_infix(const InfixExpression* expression)
+{
+    expression_free(expression->operand[0]);
+    free(expression->operand[0]);
+    expression_free(expression->operand[1]);
+    free(expression->operand[1]);
+}
+
+void expression_free_conditional(const ConditionalExpression* expression)
+{
+    expression_free(expression->condition);
+    free(expression->condition);
+    if (expression->consequence != NULL) {
+        statement_block_free(expression->consequence);
+        free(expression->consequence);
+    }
+    if (expression->alternate != NULL) {
+        statement_block_free(expression->alternate);
+        free(expression->alternate);
+    }
+}
+
 void expression_free(const Expression* expression)
 {
-    if (expression->type == EXPRESSION_NONE) {
-
-    } else if (expression->type == EXPRESSION_STRING) {
+    if (expression->type == EXPRESSION_STRING) {
         string_free(&expression->string.value);
     } else if (expression->type == EXPRESSION_IDENTIFIER) {
         string_free(&expression->identifier.value);
     } else if (expression->type == EXPRESSION_PREFIX) {
-        expression_free(expression->prefix.operand);
-        free(expression->prefix.operand);
+        expression_free_prefix(&expression->prefix);
     } else if (expression->type == EXPRESSION_INFIX) {
-        expression_free(expression->infix.operand[0]);
-        free(expression->infix.operand[0]);
-        expression_free(expression->infix.operand[1]);
-        free(expression->infix.operand[1]);
+        expression_free_infix(&expression->infix);
     } else if (expression->type == EXPRESSION_CONDITIONAL) {
-        expression_free(expression->conditional.condition);
-        free(expression->conditional.condition);
-        if (expression->conditional.consequence != NULL) {
-            expression_free(expression->conditional.consequence);
-            free(expression->conditional.consequence);
-        }
-        if (expression->conditional.alternate != NULL) {
-            expression_free(expression->conditional.alternate);
-            free(expression->conditional.alternate);
-        }
+        expression_free_conditional(&expression->conditional);
     }
 }
 
@@ -80,14 +96,14 @@ void expression_print_conditional(ConditionalExpression expression)
     expression_print(expression.condition);
     printf(")");
     if (expression.consequence != NULL) {
-        printf(" { ");
-        expression_print(expression.consequence);
-        printf(" }");
+        printf(" {\n    ");
+        statement_block_print(expression.consequence);
+        printf("}");
     }
     if (expression.alternate != NULL) {
-        printf(" else { ");
-        expression_print(expression.alternate);
-        printf(" }");
+        printf(" else {\n    ");
+        statement_block_print(expression.alternate);
+        printf("}");
     }
 }
 

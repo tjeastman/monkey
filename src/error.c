@@ -59,9 +59,6 @@ void error_print(const Error* error)
     case ERROR_EXPRESSION_BLOCK_EXPECTED_LEFT_BRACE:
         printf("expected opening left brace in conditional expression\n");
         break;
-    case ERROR_EXPRESSION_BLOCK_EXPECTED_RIGHT_BRACE:
-        printf("expected opening right brace in conditional expression\n");
-        break;
     case ERROR_EXPRESSION_PUTS_EXPECTED_LEFT_PAREN:
         printf("expected opening left parenthesis in puts expression\n");
         break;

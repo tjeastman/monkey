@@ -3,9 +3,9 @@
 
 #include "monkey/expression.h"
 #include "monkey/parser.h"
-#include "monkey/program.h"
 #include "monkey/statement.h"
 #include "monkey/string.h"
+#include "monkey/token.h"
 
 void parser_init(Parser* parser, FILE* file)
 {
@@ -58,8 +58,6 @@ bool parser_parse_identifier(Parser* parser, Expression* expression)
     return true;
 }
 
-bool parser_parse_expression(Parser*, Expression*, Precedence);
-
 bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Operation operation)
 {
     expression->type = EXPRESSION_PREFIX;
@@ -87,7 +85,7 @@ bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
     return true;
 }
 
-bool parser_parse_block_expression(Parser* parser, Expression* expression)
+bool parser_parse_block_expression(Parser* parser, StatementBlock* block)
 {
     parser_next(parser);
     if (parser->token.type != TOKEN_LEFT_BRACE) {
@@ -96,14 +94,15 @@ bool parser_parse_block_expression(Parser* parser, Expression* expression)
     }
 
     parser_next(parser);
-    if (!parser_parse_expression(parser, expression, PRECEDENCE_LOWEST)) {
-        return false;
-    }
-
-    parser_next(parser);
-    if (parser->token.type != TOKEN_RIGHT_BRACE) {
-        errors_append(&parser->errors, ERROR_EXPRESSION_BLOCK_EXPECTED_RIGHT_BRACE, &parser->token);
-        return false;
+    while (parser->token.type != TOKEN_RIGHT_BRACE) {
+        Statement statement;
+        statement_init(&statement);
+        if (!parser_parse_statement(parser, &statement)) {
+            statement_free(&statement);
+            return false;
+        }
+        statement_block_extend(block, &statement);
+        parser_next(parser);
     }
 
     return true;
@@ -133,8 +132,8 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
         return false;
     }
 
-    expression->conditional.consequence = (Expression*)malloc(sizeof(Expression));
-    expression->conditional.consequence->type = EXPRESSION_NONE;
+    expression->conditional.consequence = (StatementBlock*)malloc(sizeof(StatementBlock));
+    statement_block_init(expression->conditional.consequence);
 
     if (!parser_parse_block_expression(parser, expression->conditional.consequence)) {
         return false;
@@ -143,8 +142,8 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
     }
     parser_next(parser);
 
-    expression->conditional.alternate = (Expression*)malloc(sizeof(Expression));
-    expression->conditional.alternate->type = EXPRESSION_NONE;
+    expression->conditional.alternate = (StatementBlock*)malloc(sizeof(StatementBlock));
+    statement_block_init(expression->conditional.alternate);
 
     if (!parser_parse_block_expression(parser, expression->conditional.alternate)) {
         return false;
@@ -336,13 +335,13 @@ bool parser_parse_statement(Parser* parser, Statement* statement)
     }
 }
 
-bool parser_parse_program(Parser* parser, Program* program)
+bool parser_parse_program(Parser* parser, StatementBlock* block)
 {
     while (parser_next(parser)) {
         Statement statement;
         statement_init(&statement);
         if (parser_parse_statement(parser, &statement)) {
-            program_extend(program, statement);
+            statement_block_extend(block, &statement);
         } else {
             statement_free(&statement);
         }

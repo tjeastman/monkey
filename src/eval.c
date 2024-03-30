@@ -3,9 +3,9 @@
 #include <string.h>
 
 #include "monkey/environment.h"
+#include "monkey/eval.h"
 #include "monkey/expression.h"
 #include "monkey/object.h"
-#include "monkey/program.h"
 #include "monkey/statement.h"
 
 bool evaluate_identifier_expression(Environment* environment, IdentifierExpression* expression, Object* object)
@@ -57,8 +57,6 @@ bool evaluate_prefix_not_operation(Object* object)
     object->boolean = !object->boolean;
     return true;
 }
-
-bool evaluate_expression(Environment*, Expression*, Object*);
 
 bool evaluate_prefix_expression(Environment* environment, PrefixExpression* expression, Object* object)
 {
@@ -167,10 +165,13 @@ bool evaluate_infix_arithmetic_operation(Operation operation, Object* object, Ob
 
 bool evaluate_infix_expression(Environment* environment, InfixExpression* expression, Object* object)
 {
-    Object object_right;
-    if (!evaluate_expression(environment, expression->operand[1], &object_right)) {
+    if (!evaluate_expression(environment, expression->operand[0], object)) {
         return false;
-    } else if (!evaluate_expression(environment, expression->operand[0], object)) {
+    }
+
+    Object object_right;
+    object_init(&object_right);
+    if (!evaluate_expression(environment, expression->operand[1], &object_right)) {
         return false;
     }
 
@@ -193,6 +194,23 @@ bool evaluate_infix_expression(Environment* environment, InfixExpression* expres
     }
 }
 
+bool evaluate_statement_block(Environment* environment, StatementBlock* block, Object* object)
+{
+    environment = environment_push(environment);
+    Statement* statement = block->head;
+    while (statement != NULL) {
+        if (!evaluate_statement(environment, statement, object)) {
+            environment_pop(environment);
+            return false;
+        } else if (object->returned) {
+            break;
+        }
+        statement = statement->next;
+    }
+    environment_pop(environment);
+    return true;
+}
+
 bool evaluate_conditional_expression(Environment* environment, ConditionalExpression* expression, Object* object)
 {
     if (!evaluate_expression(environment, expression->condition, object)) {
@@ -206,9 +224,9 @@ bool evaluate_conditional_expression(Environment* environment, ConditionalExpres
     if (!result && expression->alternate == NULL) {
         object->type = OBJECT_NULL;
         return true;
-    } else if (!result && !evaluate_expression(environment, expression->alternate, object)) {
+    } else if (!result && !evaluate_statement_block(environment, expression->alternate, object)) {
         return false;
-    } else if (result && !evaluate_expression(environment, expression->consequence, object)) {
+    } else if (result && !evaluate_statement_block(environment, expression->consequence, object)) {
         return false;
     }
     return true;
@@ -249,43 +267,50 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
     }
 }
 
-void evaluate_expression_statement(Environment* environment, Statement* statement)
+bool evaluate_expression_statement(Environment* environment, Statement* statement, Object* object)
 {
-    Object object;
-    evaluate_expression(environment, &statement->expression, &object);
+    return evaluate_expression(environment, &statement->expression, object);
 }
 
-void evaluate_let_statement(Environment* environment, Statement* statement)
+bool evaluate_let_statement(Environment* environment, Statement* statement, Object* object)
 {
-    Object object;
-    if (evaluate_expression(environment, &statement->expression, &object)) {
-        environment_insert(environment, statement->identifier, &object);
+    if (!evaluate_expression(environment, &statement->expression, object)) {
+        return false;
     }
+    environment_insert(environment, statement->identifier, object);
+    object->type = OBJECT_NULL;
+    return true;
 }
 
-void evaluate_statement(Environment* environment, Statement* statement)
+bool evaluate_return_statement(Environment* environment, Statement* statement, Object* object)
 {
-    bool result;
+    if (!evaluate_expression(environment, &statement->expression, object)) {
+        return false;
+    }
+    object->returned = true;
+    return true;
+}
+
+bool evaluate_statement(Environment* environment, Statement* statement, Object* object)
+{
     switch (statement->type) {
     case STATEMENT_LET:
-        evaluate_let_statement(environment, statement);
-        return;
+        return evaluate_let_statement(environment, statement, object);
     case STATEMENT_RETURN:
-        return;
+        return evaluate_return_statement(environment, statement, object);
     case STATEMENT_EXPRESSION:
-        evaluate_expression_statement(environment, statement);
-        return;
+        return evaluate_expression_statement(environment, statement, object);
     case STATEMENT_NONE:
         printf("*** EVALUATION ERROR: unexpected statement type\n");
+        return false;
     }
 }
 
-void evaluate_program(Program* program)
+void evaluate_program(StatementBlock* block)
 {
-    Environment environment;
-    environment_init(&environment);
-    for (size_t i = 0; i < program->length; ++i) {
-        evaluate_statement(&environment, &program->statements[i]);
-    }
-    environment_free(&environment);
+    Environment* environment = environment_push(NULL);
+    Object object;
+    object_init(&object);
+    evaluate_statement_block(environment, block, &object);
+    environment_pop(environment);
 }

@@ -5,7 +5,6 @@
 #include "monkey/eval.h"
 #include "monkey/lexer.h"
 #include "monkey/parser.h"
-#include "monkey/program.h"
 
 bool tokenize(FILE* file)
 {
@@ -32,17 +31,17 @@ bool parse(FILE* file)
     Parser parser;
     parser_init(&parser, file);
 
-    Program program;
-    program_init(&program);
+    StatementBlock block;
+    statement_block_init(&block);
 
-    bool result = parser_parse_program(&parser, &program);
+    bool result = parser_parse_program(&parser, &block);
     if (result) {
-        program_print(&program);
+        statement_block_print(&block);
     } else {
         errors_print(&parser.errors);
     }
 
-    program_free(&program);
+    statement_block_free(&block);
     parser_free(&parser);
 
     return result;
@@ -53,17 +52,17 @@ bool eval(FILE* file)
     Parser parser;
     parser_init(&parser, file);
 
-    Program program;
-    program_init(&program);
+    StatementBlock block;
+    statement_block_init(&block);
 
-    bool result = parser_parse_program(&parser, &program);
+    bool result = parser_parse_program(&parser, &block);
     if (result) {
-        evaluate_program(&program);
+        evaluate_program(&block);
     } else {
         errors_print(&parser.errors);
     }
 
-    program_free(&program);
+    statement_block_free(&block);
     parser_free(&parser);
 
     return result;

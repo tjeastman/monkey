@@ -10,10 +10,11 @@
 typedef struct Environment Environment;
 struct Environment {
     HashTable* table;
+    const Environment* next;
 };
 
-void environment_init(Environment*);
-void environment_free(const Environment*);
+Environment* environment_push(const Environment*);
+void environment_pop(const Environment*);
 void environment_insert(const Environment*, const String*, const Object*);
 bool environment_retrieve(const Environment*, const String*, Object*);
 
