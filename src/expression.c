@@ -91,6 +91,13 @@ void expression_print_conditional(ConditionalExpression expression)
     }
 }
 
+void expression_print_puts(PutsExpression expression)
+{
+    printf("puts(");
+    expression_print(expression.expression);
+    putchar(')');
+}
+
 void expression_print(Expression* expression)
 {
     switch (expression->type) {
@@ -116,6 +123,9 @@ void expression_print(Expression* expression)
         break;
     case EXPRESSION_CONDITIONAL:
         expression_print_conditional(expression->conditional);
+        break;
+    case EXPRESSION_PUTS:
+        expression_print_puts(expression->puts);
         break;
     }
 }

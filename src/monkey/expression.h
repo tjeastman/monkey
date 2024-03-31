@@ -16,6 +16,7 @@ enum ExpressionType {
     EXPRESSION_PREFIX,
     EXPRESSION_INFIX,
     EXPRESSION_CONDITIONAL,
+    EXPRESSION_PUTS,
 };
 
 typedef struct IdentifierExpression IdentifierExpression;
@@ -59,6 +60,11 @@ struct ConditionalExpression {
     Expression* alternate;
 };
 
+typedef struct PutsExpression PutsExpression;
+struct PutsExpression {
+    Expression* expression;
+};
+
 struct Expression {
     ExpressionType type;
     union {
@@ -69,6 +75,7 @@ struct Expression {
         PrefixExpression prefix;
         InfixExpression infix;
         ConditionalExpression conditional;
+        PutsExpression puts;
     };
 };
 

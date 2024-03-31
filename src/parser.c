@@ -153,6 +153,32 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
     return true;
 }
 
+bool parser_parse_puts_expression(Parser* parser, Expression* expression)
+{
+    parser_next(parser);
+    if (parser->token.type != TOKEN_LEFT_PAREN) {
+        errors_append(&parser->errors, ERROR_EXPRESSION_PUTS_EXPECTED_LEFT_PAREN, &parser->token);
+        return false;
+    }
+
+    expression->type = EXPRESSION_PUTS;
+    expression->puts.expression = (Expression*)malloc(sizeof(Expression));
+    expression->puts.expression->type = EXPRESSION_NONE;
+
+    parser_next(parser);
+    if (!parser_parse_expression(parser, expression->puts.expression, PRECEDENCE_LOWEST)) {
+        return false;
+    }
+
+    parser_next(parser);
+    if (parser->token.type != TOKEN_RIGHT_PAREN) {
+        errors_append(&parser->errors, ERROR_EXPRESSION_PUTS_EXPECTED_RIGHT_PAREN, &parser->token);
+        return false;
+    }
+
+    return true;
+}
+
 bool parser_parse_expression_left(Parser* parser, Expression* expression)
 {
     switch (parser->token.type) {
@@ -173,6 +199,8 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
         return parser_parse_grouped_expression(parser, expression);
     case TOKEN_IF:
         return parser_parse_conditional_expression(parser, expression);
+    case TOKEN_PUTS:
+        return parser_parse_puts_expression(parser, expression);
     default:
         errors_append(&parser->errors, ERROR_TOKEN_UNEXPECTED, &parser->token);
         return false;

@@ -269,6 +269,8 @@ Token lexer_token_next(Lexer* lexer)
         token.type = TOKEN_TRUE;
     } else if (strncmp(token.lexeme.value, "false", 5) == 0) {
         token.type = TOKEN_FALSE;
+    } else if (strncmp(token.lexeme.value, "puts", 4) == 0) {
+        token.type = TOKEN_PUTS;
     }
     return token;
 }

@@ -214,6 +214,16 @@ bool evaluate_conditional_expression(Environment* environment, ConditionalExpres
     return true;
 }
 
+bool evaluate_puts_expression(Environment* environment, PutsExpression* expression, Object* object)
+{
+    if (!evaluate_expression(environment, expression->expression, object)) {
+        return false;
+    }
+    object_print(object);
+    object->type = OBJECT_NULL;
+    return true;
+}
+
 bool evaluate_expression(Environment* environment, Expression* expression, Object* object)
 {
     switch (expression->type) {
@@ -231,6 +241,8 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
         return evaluate_infix_expression(environment, &expression->infix, object);
     case EXPRESSION_CONDITIONAL:
         return evaluate_conditional_expression(environment, &expression->conditional, object);
+    case EXPRESSION_PUTS:
+        return evaluate_puts_expression(environment, &expression->puts, object);
     default:
         printf("*** EVALUATION ERROR: unexpected expression type\n");
         return false;
@@ -240,9 +252,7 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
 void evaluate_expression_statement(Environment* environment, Statement* statement)
 {
     Object object;
-    if (evaluate_expression(environment, &statement->expression, &object)) {
-        object_print(&object);
-    }
+    evaluate_expression(environment, &statement->expression, &object);
 }
 
 void evaluate_let_statement(Environment* environment, Statement* statement)
