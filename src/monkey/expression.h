@@ -79,7 +79,7 @@ struct Expression {
     };
 };
 
-void expression_free(Expression*);
-void expression_print(Expression*);
+void expression_free(const Expression*);
+void expression_print(const Expression*);
 
 #endif // MONKEY_EXPRESSION_H_

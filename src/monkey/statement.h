@@ -20,7 +20,7 @@ struct Statement {
 };
 
 void statement_init(Statement*);
-void statement_free(Statement*);
-void statement_print(Statement*);
+void statement_free(const Statement*);
+void statement_print(const Statement*);
 
 #endif // MONKEY_STATEMENT_H_

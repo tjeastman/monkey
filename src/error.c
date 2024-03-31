@@ -13,7 +13,7 @@ void errors_free(ErrorList* errors)
     errors->tail = NULL;
 }
 
-void errors_append(ErrorList* errors, ErrorType type, Token* token)
+void errors_append(ErrorList* errors, ErrorType type, const Token* token)
 {
     Error* error = (Error*)malloc(sizeof(Error));
     error->next = NULL;
@@ -31,7 +31,7 @@ void errors_append(ErrorList* errors, ErrorType type, Token* token)
     }
 }
 
-void error_print(Error* error)
+void error_print(const Error* error)
 {
     printf("%zu:%zd: ", error->token.line, error->token.position);
     switch (error->type) {
@@ -71,7 +71,7 @@ void error_print(Error* error)
     }
 }
 
-void errors_print(ErrorList* errors)
+void errors_print(const ErrorList* errors)
 {
     for (Error* error = errors->head; error != NULL; error = error->next) {
         error_print(error);

@@ -5,7 +5,7 @@
 #include "monkey/operation.h"
 #include "monkey/string.h"
 
-void expression_free(Expression* expression)
+void expression_free(const Expression* expression)
 {
     if (expression->type == EXPRESSION_NONE) {
 
@@ -98,7 +98,7 @@ void expression_print_puts(PutsExpression expression)
     putchar(')');
 }
 
-void expression_print(Expression* expression)
+void expression_print(const Expression* expression)
 {
     switch (expression->type) {
     case EXPRESSION_NONE:

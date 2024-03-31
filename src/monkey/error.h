@@ -34,7 +34,7 @@ struct ErrorList {
 };
 
 void errors_free(ErrorList*);
-void errors_append(ErrorList*, ErrorType, Token*);
-void errors_print(ErrorList*);
+void errors_append(ErrorList*, ErrorType, const Token*);
+void errors_print(const ErrorList*);
 
 #endif // MONKEY_ERROR_H_

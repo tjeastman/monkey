@@ -11,7 +11,7 @@ void statement_init(Statement* statement)
     statement->expression.type = EXPRESSION_NONE;
 }
 
-void statement_free(Statement* statement)
+void statement_free(const Statement* statement)
 {
     if (statement->identifier != NULL) {
         string_free(statement->identifier);
@@ -19,7 +19,7 @@ void statement_free(Statement* statement)
     expression_free(&statement->expression);
 }
 
-void statement_print(Statement* statement)
+void statement_print(const Statement* statement)
 {
     if (statement->type == STATEMENT_LET) {
         printf("let ");

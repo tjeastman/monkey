@@ -14,7 +14,7 @@ void object_copy(Object* object, const Object* source)
     }
 }
 
-void object_print(Object* object)
+void object_print(const Object* object)
 {
     switch (object->type) {
     case OBJECT_NULL:
