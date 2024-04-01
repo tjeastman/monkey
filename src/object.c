@@ -40,6 +40,14 @@ bool object_init_function(Object* object, FunctionExpression* function)
     return true;
 }
 
+bool object_init_internal(Object* object, bool (*internal)(Object*))
+{
+    object->type = OBJECT_INTERNAL;
+    object->internal = internal;
+    object->returned = false;
+    return true;
+}
+
 void object_free(Object* object)
 {
     if (object->type == OBJECT_STRING) {
@@ -63,6 +71,8 @@ bool object_copy(Object* object, const Object* source)
         return object_init_string(object, source->string);
     } else if (source->type == OBJECT_FUNCTION) {
         return object_init_function(object, source->function);
+    } else if (source->type == OBJECT_INTERNAL) {
+        return object_init_internal(object, source->internal);
     }
     return true;
 }
@@ -84,6 +94,8 @@ bool object_equal(const Object* object, const Object* object_alt)
         return string_equal(object->string, object_alt->string);
     case OBJECT_FUNCTION:
         return object->function == object_alt->function;
+    case OBJECT_INTERNAL:
+        return object->internal == object_alt->internal;
     }
 
     return false;
@@ -108,6 +120,9 @@ void object_print(const Object* object)
         break;
     case OBJECT_FUNCTION:
         printf("function\n");
+        break;
+    case OBJECT_INTERNAL:
+        printf("internal\n");
         break;
     }
 }

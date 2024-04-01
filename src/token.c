@@ -121,8 +121,5 @@ void token_print(const Token* token)
     case TOKEN_RIGHT_BRACKET:
         printf("RIGHT_BRACKET\n");
         break;
-    case TOKEN_PUTS:
-        printf("PUTS\n");
-        break;
     }
 }

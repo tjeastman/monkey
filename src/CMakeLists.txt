@@ -15,6 +15,7 @@ add_executable(
   eval.c
   hash.c
   environment.c
+  functions.c
 )
 
 set_property(TARGET main PROPERTY C_STANDARD 17)

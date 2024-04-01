@@ -18,6 +18,7 @@ bool string_append(String*, char);
 bool string_concatenate(String*, const String*);
 bool string_copy(String*, const String*);
 bool string_equal(const String*, const String*);
+int string_length(const String*);
 void string_print(const String*);
 
 #endif // MONKEY_STRING_H_

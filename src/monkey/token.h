@@ -46,8 +46,6 @@ enum TokenType {
     TOKEN_RIGHT_PAREN,
     TOKEN_RIGHT_BRACE,
     TOKEN_RIGHT_BRACKET,
-    // functions
-    TOKEN_PUTS,
 };
 
 typedef struct Token Token;

@@ -13,6 +13,7 @@ enum ObjectType {
     OBJECT_STRING,
     OBJECT_BOOL,
     OBJECT_FUNCTION,
+    OBJECT_INTERNAL,
 };
 
 typedef struct Object Object;
@@ -23,6 +24,7 @@ struct Object {
         String* string;
         bool boolean;
         FunctionExpression* function;
+        bool (*internal)(Object*);
     };
     bool returned;
 };
@@ -31,6 +33,7 @@ bool object_init_integer(Object*, int);
 bool object_init_string(Object*, String*);
 bool object_init_bool(Object*, bool);
 bool object_init_function(Object*, FunctionExpression*);
+bool object_init_internal(Object*, bool (*)(Object*));
 void object_free(Object*);
 bool object_copy(Object*, const Object*);
 bool object_equal(const Object*, const Object*);

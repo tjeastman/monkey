@@ -20,7 +20,6 @@ enum ExpressionType {
     EXPRESSION_CONDITIONAL,
     EXPRESSION_FUNCTION,
     EXPRESSION_CALL,
-    EXPRESSION_PUTS,
 };
 
 typedef struct IdentifierExpression IdentifierExpression;
@@ -64,11 +63,6 @@ struct ConditionalExpression {
     StatementBlock* alternate;
 };
 
-typedef struct PutsExpression PutsExpression;
-struct PutsExpression {
-    Expression* expression;
-};
-
 typedef struct FunctionParameter FunctionParameter;
 struct FunctionParameter {
     String name;
@@ -105,7 +99,6 @@ struct Expression {
         ConditionalExpression conditional;
         FunctionExpression function;
         CallExpression call;
-        PutsExpression puts;
     };
 };
 

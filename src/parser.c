@@ -210,21 +210,6 @@ bool parser_parse_call_expression(Parser* parser, Expression* expression)
     return parser_parse_call_arguments(parser, expression, &expression->call.arguments);
 }
 
-bool parser_parse_puts_expression(Parser* parser, Expression* expression)
-{
-    if (!parser_next_expect(parser, TOKEN_LEFT_PAREN, ERROR_EXPRESSION_PUTS_EXPECTED_LEFT_PAREN)) {
-        return false;
-    } else if (!expression_init_puts(expression)) {
-        return false;
-    } else if (!parser_parse_expression_next(parser, expression->puts.expression, PRECEDENCE_LOWEST)) {
-        return false;
-    } else if (!parser_next_expect(parser, TOKEN_RIGHT_PAREN, ERROR_EXPRESSION_PUTS_EXPECTED_RIGHT_PAREN)) {
-        return false;
-    }
-
-    return true;
-}
-
 bool parser_parse_expression_left(Parser* parser, Expression* expression)
 {
     switch (parser->token.type) {
@@ -247,8 +232,6 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
         return parser_parse_conditional_expression(parser, expression);
     case TOKEN_FUNCTION:
         return parser_parse_function_expression(parser, expression);
-    case TOKEN_PUTS:
-        return parser_parse_puts_expression(parser, expression);
     default:
         parser_error(parser, ERROR_TOKEN_UNEXPECTED);
         return false;

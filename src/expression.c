@@ -93,13 +93,6 @@ bool expression_init_call(Expression* expression, Expression* function)
     return true;
 }
 
-bool expression_init_puts(Expression* expression)
-{
-    expression->type = EXPRESSION_PUTS;
-    expression->puts.expression = expression_new();
-    return true;
-}
-
 void expression_free_prefix(const PrefixExpression* expression)
 {
     expression_free(expression->operand);
@@ -282,13 +275,6 @@ void expression_print_call(CallExpression expression)
     putchar(')');
 }
 
-void expression_print_puts(PutsExpression expression)
-{
-    printf("puts(");
-    expression_print(expression.expression);
-    putchar(')');
-}
-
 void expression_print(const Expression* expression)
 {
     switch (expression->type) {
@@ -321,8 +307,6 @@ void expression_print(const Expression* expression)
     case EXPRESSION_CALL:
         expression_print_call(expression->call);
         break;
-    case EXPRESSION_PUTS:
-        expression_print_puts(expression->puts);
     }
 }
 

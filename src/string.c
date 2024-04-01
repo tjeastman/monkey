@@ -77,6 +77,11 @@ bool string_equal(const String* string, const String* string_alt)
     return strcmp(string->value, string_alt->value) == 0;
 }
 
+int string_length(const String* string)
+{
+    return string->position;
+}
+
 void string_print(const String* string)
 {
     if (string->value != NULL) {

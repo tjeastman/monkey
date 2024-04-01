@@ -4,6 +4,8 @@
 #include "monkey/environment.h"
 #include "monkey/eval.h"
 #include "monkey/expression.h"
+#include "monkey/functions.h"
+#include "monkey/hash.h"
 #include "monkey/object.h"
 #include "monkey/statement.h"
 
@@ -248,44 +250,55 @@ bool evaluate_call_expression_arguments(Environment* environment, FunctionParame
     return evaluate_call_expression_arguments(environment, parameter->next, argument->next);
 }
 
-bool evaluate_call_expression(Environment* environment, CallExpression* expression, Object* object)
+bool evaluate_call_expression_external(Environment* environment, CallExpression* expression, Object* object_fn, Object* object)
 {
-    Object object_fn;
-    if (!evaluate_expression(environment, expression->function, &object_fn)) {
-        return false;
-    } else if (object_fn.type != OBJECT_FUNCTION) {
-        printf("*** EVALUATION ERROR: non-function object in call expression\n");
-        object_free(&object_fn);
-        return false;
-    }
 
     Environment environment_new;
     environment_init(&environment_new, environment);
-    if (!evaluate_call_expression_arguments(&environment_new, object_fn.function->parameters, expression->arguments)) {
+    if (!evaluate_call_expression_arguments(&environment_new, object_fn->function->parameters, expression->arguments)) {
         environment_free(&environment_new);
-        object_free(&object_fn);
         return false;
-    } else if (!evaluate_statement_block_aux(&environment_new, object_fn.function->body, object)) {
+    } else if (!evaluate_statement_block_aux(&environment_new, object_fn->function->body, object)) {
         environment_free(&environment_new);
-        object_free(&object_fn);
         return false;
     } else if (object->returned) {
         object->returned = false;
     }
 
     environment_free(&environment_new);
-    object_free(&object_fn);
     return true;
 }
 
-bool evaluate_puts_expression(Environment* environment, PutsExpression* expression, Object* object)
+bool evaluate_call_expression_internal(Environment* environment, CallExpression* expression, Object* object_fn, Object* object)
 {
-    if (!evaluate_expression(environment, expression->expression, object)) {
+    if (expression->arguments == NULL) {
+        printf("*** EVALUATION ERROR: not enough arguments in call expression\n");
+        return false;
+    } else if (expression->arguments->next != NULL) {
+        printf("*** EVALUATION ERROR: too many arguments in call expression\n");
+        return false;
+    } else if (!evaluate_expression(environment, expression->arguments->expression, object)) {
         return false;
     }
-    object_print(object);
-    object_free(object);
-    return true;
+
+    return object_fn->internal(object);
+}
+
+bool evaluate_call_expression(Environment* environment, CallExpression* expression, Object* object)
+{
+    Object object_fn;
+    bool result = false;
+    if (!evaluate_expression(environment, expression->function, &object_fn)) {
+        return false;
+    } else if (object_fn.type == OBJECT_FUNCTION) {
+        result = evaluate_call_expression_external(environment, expression, &object_fn, object);
+    } else if (object_fn.type == OBJECT_INTERNAL) {
+        result = evaluate_call_expression_internal(environment, expression, &object_fn, object);
+    } else {
+        printf("*** EVALUATION ERROR: non-function object in call expression\n");
+    }
+    object_free(&object_fn);
+    return result;
 }
 
 bool evaluate_expression(Environment* environment, Expression* expression, Object* object)
@@ -309,8 +322,6 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
         return object_init_function(object, &expression->function);
     case EXPRESSION_CALL:
         return evaluate_call_expression(environment, &expression->call, object);
-    case EXPRESSION_PUTS:
-        return evaluate_puts_expression(environment, &expression->puts, object);
     default:
         printf("*** EVALUATION ERROR: unexpected expression type\n");
         return false;
@@ -354,11 +365,22 @@ bool evaluate_statement(Environment* environment, Statement* statement, Object* 
 
 void evaluate_program(StatementBlock* block)
 {
-    Object object;
     Environment environment;
     environment_init(&environment, NULL);
-    if (evaluate_statement_block_aux(&environment, block, &object)) {
-        object_free(&object);
+
+    Object* object;
+    object = malloc(sizeof(Object));
+    object_init_internal(object, function_puts);
+    hash_insert(&environment.table, "puts", object);
+
+    object = malloc(sizeof(Object));
+    object_init_internal(object, function_length);
+    hash_insert(&environment.table, "len", object);
+
+    object = malloc(sizeof(Object));
+    if (evaluate_statement_block_aux(&environment, block, object)) {
+        object_free(object);
     }
+    free(object);
     environment_free(&environment);
 }
