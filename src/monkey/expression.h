@@ -109,6 +109,16 @@ struct Expression {
     };
 };
 
+Expression* expression_new();
+Expression* expression_move(const Expression*);
+bool expression_init_integer(Expression*, int);
+bool expression_init_bool(Expression*, bool);
+bool expression_init_string(Expression*, String*);
+bool expression_init_identifier(Expression*, String*);
+bool expression_init_prefix(Expression*, Operation);
+bool expression_init_infix(Expression*, Expression*, Operation);
+bool expression_init_conditional(Expression*);
+bool expression_init_function(Expression*);
 void expression_free(const Expression*);
 void expression_print(const Expression*);
 

@@ -1,6 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
+#include <stdlib.h>
 
 #include "monkey/error.h"
 #include "monkey/expression.h"
@@ -32,46 +32,12 @@ bool parser_next(Parser* parser)
     return parser->token.type != TOKEN_END && parser->token.type != TOKEN_ILLEGAL;
 }
 
-bool parser_parse_integer(Parser* parser, Expression* expression)
-{
-    expression->type = EXPRESSION_INTEGER;
-    expression->integer.value = atoi(parser->token.lexeme.value);
-    return true;
-}
-
-bool parser_parse_bool(Parser* parser, Expression* expression)
-{
-    expression->type = EXPRESSION_BOOL;
-    expression->boolean.value = parser->token.type == TOKEN_TRUE;
-    return true;
-}
-
-bool parser_parse_string(Parser* parser, Expression* expression)
-{
-    expression->type = EXPRESSION_STRING;
-    string_copy(&expression->string.value, &parser->token.lexeme);
-    return true;
-}
-
-bool parser_parse_identifier(Parser* parser, Expression* expression)
-{
-    expression->type = EXPRESSION_IDENTIFIER;
-    string_copy(&expression->identifier.value, &parser->token.lexeme);
-    return true;
-}
-
 bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Operation operation)
 {
-    expression->type = EXPRESSION_PREFIX;
-    expression->prefix.operation = operation;
-    expression->prefix.operand = (Expression*)malloc(sizeof(Expression));
-    expression->prefix.operand->type = EXPRESSION_NONE;
+    expression_init_prefix(expression, operation);
 
     parser_next(parser);
-    if (!parser_parse_expression(parser, expression->prefix.operand, PRECEDENCE_PREFIX)) {
-        return false;
-    }
-    return true;
+    return parser_parse_expression(parser, expression->prefix.operand, PRECEDENCE_PREFIX);
 }
 
 bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
@@ -118,10 +84,7 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
         return false;
     }
 
-    expression->type = EXPRESSION_CONDITIONAL;
-    expression->conditional.condition = (Expression*)malloc(sizeof(Expression));
-    expression->conditional.consequence = NULL;
-    expression->conditional.alternate = NULL;
+    expression_init_conditional(expression);
 
     parser_next(parser);
     if (!parser_parse_expression(parser, expression->conditional.condition, PRECEDENCE_LOWEST)) {
@@ -147,11 +110,7 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
     expression->conditional.alternate = (StatementBlock*)malloc(sizeof(StatementBlock));
     statement_block_init(expression->conditional.alternate);
 
-    if (!parser_parse_block_expression(parser, expression->conditional.alternate)) {
-        return false;
-    }
-
-    return true;
+    return parser_parse_block_expression(parser, expression->conditional.alternate);
 }
 
 bool parser_parse_function_expression_parameters(Parser* parser, FunctionParameter** parameters)
@@ -197,9 +156,7 @@ bool parser_parse_function_expression(Parser* parser, Expression* expression)
         return false;
     }
 
-    expression->type = EXPRESSION_FUNCTION;
-    expression->function.parameters = NULL;
-    expression->function.body = NULL;
+    expression_init_function(expression);
 
     if (!parser_parse_function_expression_parameters(parser, &expression->function.parameters)) {
         return false;
@@ -208,11 +165,7 @@ bool parser_parse_function_expression(Parser* parser, Expression* expression)
     expression->function.body = (StatementBlock*)malloc(sizeof(StatementBlock));
     statement_block_init(expression->function.body);
 
-    if (!parser_parse_block_expression(parser, expression->function.body)) {
-        return false;
-    }
-
-    return true;
+    return parser_parse_block_expression(parser, expression->function.body);
 }
 
 bool parser_parse_call_expression_arguments(Parser* parser, Expression* expression, FunctionArgument** arguments)
@@ -230,8 +183,7 @@ bool parser_parse_call_expression_arguments(Parser* parser, Expression* expressi
         }
         argument->next = NULL;
 
-        argument->expression = (Expression*)malloc(sizeof(Expression));
-        argument->expression->type = EXPRESSION_NONE;
+        argument->expression = expression_new();
         if (!parser_parse_expression(parser, argument->expression, PRECEDENCE_LOWEST)) {
             return false;
         }
@@ -252,18 +204,13 @@ bool parser_parse_call_expression_arguments(Parser* parser, Expression* expressi
 
 bool parser_parse_call_expression(Parser* parser, Expression* expression)
 {
-    Expression* function = (Expression*)malloc(sizeof(Expression));
-    memcpy(function, expression, sizeof(Expression));
+    Expression* function = expression_move(expression);
 
     expression->type = EXPRESSION_CALL;
     expression->call.function = function;
     expression->call.arguments = NULL;
 
-    if (!parser_parse_call_expression_arguments(parser, expression, &expression->call.arguments)) {
-        return false;
-    }
-
-    return true;
+    return parser_parse_call_expression_arguments(parser, expression, &expression->call.arguments);
 }
 
 bool parser_parse_puts_expression(Parser* parser, Expression* expression)
@@ -275,8 +222,7 @@ bool parser_parse_puts_expression(Parser* parser, Expression* expression)
     }
 
     expression->type = EXPRESSION_PUTS;
-    expression->puts.expression = (Expression*)malloc(sizeof(Expression));
-    expression->puts.expression->type = EXPRESSION_NONE;
+    expression->puts.expression = expression_new();
 
     parser_next(parser);
     if (!parser_parse_expression(parser, expression->puts.expression, PRECEDENCE_LOWEST)) {
@@ -296,14 +242,14 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
 {
     switch (parser->token.type) {
     case TOKEN_IDENTIFIER:
-        return parser_parse_identifier(parser, expression);
+        return expression_init_identifier(expression, &parser->token.lexeme);
     case TOKEN_INTEGER:
-        return parser_parse_integer(parser, expression);
+        return expression_init_integer(expression, atoi(parser->token.lexeme.value));
     case TOKEN_STRING:
-        return parser_parse_string(parser, expression);
+        return expression_init_string(expression, &parser->token.lexeme);
     case TOKEN_TRUE:
     case TOKEN_FALSE:
-        return parser_parse_bool(parser, expression);
+        return expression_init_bool(expression, parser->token.type == TOKEN_TRUE);
     case TOKEN_MINUS:
         return parser_parse_prefix_expression(parser, expression, OPERATION_NEGATIVE);
     case TOKEN_NOT:
@@ -363,14 +309,9 @@ bool parser_parse_expression_right(Parser* parser, Expression* expression, Prece
             return true;
         }
 
-        Expression* expression_left = (Expression*)malloc(sizeof(Expression));
-        memcpy(expression_left, expression, sizeof(Expression));
+        Expression* expression_left = expression_move(expression);
 
-        expression->type = EXPRESSION_INFIX;
-        expression->infix.operand[0] = expression_left;
-        expression->infix.operand[1] = (Expression*)malloc(sizeof(Expression));
-        expression->infix.operand[1]->type = EXPRESSION_NONE;
-        expression->infix.operation = operation;
+        expression_init_infix(expression, expression_left, operation);
 
         parser_next(parser);
         parser_next(parser);

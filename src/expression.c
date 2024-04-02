@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "monkey/expression.h"
 #include "monkey/operation.h"
@@ -7,6 +8,82 @@
 
 void statement_block_free(const StatementBlock*);
 void statement_block_print(const StatementBlock*);
+
+Expression* expression_new()
+{
+    Expression* expression = (Expression*)malloc(sizeof(Expression));
+    expression->type = EXPRESSION_NONE;
+    return expression;
+}
+
+Expression* expression_move(const Expression* source)
+{
+    Expression* expression = (Expression*)malloc(sizeof(Expression));
+    memcpy(expression, source, sizeof(Expression));
+    return expression;
+}
+
+bool expression_init_integer(Expression* expression, int value)
+{
+    expression->type = EXPRESSION_INTEGER;
+    expression->integer.value = value;
+    return true;
+}
+
+bool expression_init_bool(Expression* expression, bool value)
+{
+    expression->type = EXPRESSION_BOOL;
+    expression->boolean.value = value;
+    return true;
+}
+
+bool expression_init_string(Expression* expression, String* value)
+{
+    expression->type = EXPRESSION_STRING;
+    string_copy(&expression->string.value, value);
+    return true;
+}
+
+bool expression_init_identifier(Expression* expression, String* value)
+{
+    expression->type = EXPRESSION_IDENTIFIER;
+    string_copy(&expression->identifier.value, value);
+    return true;
+}
+
+bool expression_init_prefix(Expression* expression, Operation operation)
+{
+    expression->type = EXPRESSION_PREFIX;
+    expression->prefix.operation = operation;
+    expression->prefix.operand = expression_new();
+    return true;
+}
+
+bool expression_init_infix(Expression* expression, Expression* expression_left, Operation operation)
+{
+    expression->type = EXPRESSION_INFIX;
+    expression->infix.operand[0] = expression_left;
+    expression->infix.operand[1] = expression_new();
+    expression->infix.operation = operation;
+    return true;
+}
+
+bool expression_init_conditional(Expression* expression)
+{
+    expression->type = EXPRESSION_CONDITIONAL;
+    expression->conditional.condition = expression_new();
+    expression->conditional.consequence = NULL;
+    expression->conditional.alternate = NULL;
+    return true;
+}
+
+bool expression_init_function(Expression* expression)
+{
+    expression->type = EXPRESSION_FUNCTION;
+    expression->function.parameters = NULL;
+    expression->function.body = NULL;
+    return true;
+}
 
 void expression_free_prefix(const PrefixExpression* expression)
 {
