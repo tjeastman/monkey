@@ -325,3 +325,21 @@ void expression_print(const Expression* expression)
         expression_print_puts(expression->puts);
     }
 }
+
+bool function_parameter_new(FunctionParameter** parameters, const String* identifier)
+{
+    FunctionParameter* parameter = (FunctionParameter*)malloc(sizeof(FunctionParameter));
+    string_copy(&parameter->name, identifier);
+    parameter->next = NULL;
+    *parameters = parameter;
+    return true;
+}
+
+bool function_argument_new(FunctionArgument** arguments)
+{
+    FunctionArgument* argument = (FunctionArgument*)malloc(sizeof(FunctionArgument));
+    argument->expression = expression_new();
+    argument->next = NULL;
+    *arguments = argument;
+    return true;
+}

@@ -60,14 +60,12 @@ bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Oper
 {
     expression_init_prefix(expression, operation);
 
-    parser_next(parser);
-    return parser_parse_expression(parser, expression->prefix.operand, PRECEDENCE_PREFIX);
+    return parser_parse_expression_next(parser, expression->prefix.operand, PRECEDENCE_PREFIX);
 }
 
 bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
 {
-    parser_next(parser);
-    if (!parser_parse_expression(parser, expression, PRECEDENCE_LOWEST)) {
+    if (!parser_parse_expression_next(parser, expression, PRECEDENCE_LOWEST)) {
         return false;
     } else if (!parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
         parser_error(parser, ERROR_EXPRESSION_GROUP_EXPECTED_PAREN);
@@ -103,10 +101,7 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
         return false;
     } else if (!expression_init_conditional(expression)) {
         return false;
-    }
-
-    parser_next(parser);
-    if (!parser_parse_expression(parser, expression->conditional.condition, PRECEDENCE_LOWEST)) {
+    } else if (!parser_parse_expression_next(parser, expression->conditional.condition, PRECEDENCE_LOWEST)) {
         return false;
     } else if (!parser_next_expect(parser, TOKEN_RIGHT_PAREN, ERROR_EXPRESSION_IF_EXPECTED_RIGHT_PAREN)) {
         return false;
@@ -127,36 +122,31 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
     return parser_parse_block_expression(parser, expression->conditional.alternate);
 }
 
-bool parser_parse_function_expression_parameters(Parser* parser, FunctionParameter** parameters)
+bool parser_parse_function_parameters(Parser* parser, FunctionParameter** parameters)
 {
-    FunctionParameter* parameter = NULL;
+    // zero parameters
+    if (parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
+        return true;
+    }
 
-    parser_next(parser);
-    while (parser->token.type != TOKEN_RIGHT_PAREN) {
-        if (parser->token.type != TOKEN_IDENTIFIER) {
-            parser_error(parser, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER);
+    // first parameter
+    if (!parser_next_expect(parser, TOKEN_IDENTIFIER, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER)) {
+        return false;
+    } else if (!function_parameter_new(parameters, &parser->token.lexeme)) {
+        return false;
+    }
+
+    // remaining parameters
+    FunctionParameter* parameter = *parameters;
+    while (!parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
+        if (!parser_next_expect(parser, TOKEN_COMMA, ERROR_EXPRESSION_FUNCTION_EXPECTED_COMMA)) {
+            return false;
+        } else if (!parser_next_expect(parser, TOKEN_IDENTIFIER, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER)) {
+            return false;
+        } else if (!function_parameter_new(&parameter->next, &parser->token.lexeme)) {
             return false;
         }
-
-        if (parameter == NULL) {
-            parameter = (FunctionParameter*)malloc(sizeof(FunctionParameter));
-            *parameters = parameter;
-        } else {
-            parameter->next = (FunctionParameter*)malloc(sizeof(FunctionParameter));
-            parameter = parameter->next;
-        }
-        string_copy(&parameter->name, &parser->token.lexeme);
-        parameter->next = NULL;
-
-        parser_next(parser);
-        if (parser->token.type == TOKEN_RIGHT_PAREN) {
-            break;
-        } else if (parser->token.type == TOKEN_COMMA) {
-            parser_next(parser);
-        } else {
-            parser_error(parser, ERROR_EXPRESSION_FUNCTION_EXPECTED_COMMA);
-            return false;
-        }
+        parameter = parameter->next;
     }
 
     return true;
@@ -168,7 +158,7 @@ bool parser_parse_function_expression(Parser* parser, Expression* expression)
         return false;
     } else if (!expression_init_function(expression)) {
         return false;
-    } else if (!parser_parse_function_expression_parameters(parser, &expression->function.parameters)) {
+    } else if (!parser_parse_function_parameters(parser, &expression->function.parameters)) {
         return false;
     }
 
@@ -178,35 +168,35 @@ bool parser_parse_function_expression(Parser* parser, Expression* expression)
     return parser_parse_block_expression(parser, expression->function.body);
 }
 
-bool parser_parse_call_expression_arguments(Parser* parser, Expression* expression, FunctionArgument** arguments)
+bool parser_parse_call_argument(Parser* parser, FunctionArgument** arguments)
 {
-    FunctionArgument* argument = NULL;
+    if (!function_argument_new(arguments)) {
+        return false;
+    }
+    return parser_parse_expression_next(parser, (*arguments)->expression, PRECEDENCE_LOWEST);
+}
 
-    parser_next(parser);
-    while (parser->token.type != TOKEN_RIGHT_PAREN) {
-        if (argument == NULL) {
-            argument = (FunctionArgument*)malloc(sizeof(FunctionArgument));
-            *arguments = argument;
-        } else {
-            argument->next = (FunctionArgument*)malloc(sizeof(FunctionArgument));
-            argument = argument->next;
-        }
-        argument->next = NULL;
+bool parser_parse_call_arguments(Parser* parser, Expression* expression, FunctionArgument** arguments)
+{
+    // zero arguments
+    if (parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
+        return true;
+    }
 
-        argument->expression = expression_new();
-        if (!parser_parse_expression(parser, argument->expression, PRECEDENCE_LOWEST)) {
+    // first argument
+    if (!parser_parse_call_argument(parser, arguments)) {
+        return false;
+    }
+
+    // remaining arguments
+    FunctionArgument* argument = *arguments;
+    while (!parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
+        if (!parser_next_expect(parser, TOKEN_COMMA, ERROR_EXPRESSION_CALL_EXPECTED_COMMA)) {
+            return false;
+        } else if (!parser_parse_call_argument(parser, &argument->next)) {
             return false;
         }
-
-        parser_next(parser);
-        if (parser->token.type == TOKEN_RIGHT_PAREN) {
-            break;
-        } else if (parser->token.type == TOKEN_COMMA) {
-            parser_next(parser);
-        } else {
-            parser_error(parser, ERROR_EXPRESSION_CALL_EXPECTED_COMMA);
-            return false;
-        }
+        argument = argument->next;
     }
 
     return true;
@@ -217,7 +207,7 @@ bool parser_parse_call_expression(Parser* parser, Expression* expression)
     if (!expression_init_call(expression, expression_move(expression))) {
         return false;
     }
-    return parser_parse_call_expression_arguments(parser, expression, &expression->call.arguments);
+    return parser_parse_call_arguments(parser, expression, &expression->call.arguments);
 }
 
 bool parser_parse_puts_expression(Parser* parser, Expression* expression)
@@ -226,10 +216,7 @@ bool parser_parse_puts_expression(Parser* parser, Expression* expression)
         return false;
     } else if (!expression_init_puts(expression)) {
         return false;
-    }
-
-    parser_next(parser);
-    if (!parser_parse_expression(parser, expression->puts.expression, PRECEDENCE_LOWEST)) {
+    } else if (!parser_parse_expression_next(parser, expression->puts.expression, PRECEDENCE_LOWEST)) {
         return false;
     } else if (!parser_next_expect(parser, TOKEN_RIGHT_PAREN, ERROR_EXPRESSION_PUTS_EXPECTED_RIGHT_PAREN)) {
         return false;
@@ -299,6 +286,13 @@ Operation parser_parse_infix_operation(Parser* parser)
 bool parser_parse_expression_right(Parser* parser, Expression* expression, Precedence precedence_min)
 {
     while (true) {
+        // check for function call
+        if (!parser_next_if(parser, TOKEN_LEFT_PAREN)) {
+
+        } else if (!parser_parse_call_expression(parser, expression)) {
+            return false;
+        }
+
         Operation operation = parser_parse_infix_operation(parser);
         if (operation == OPERATION_NONE) {
             return true;
@@ -328,14 +322,13 @@ bool parser_parse_expression(Parser* parser, Expression* expression, Precedence 
     } else if (!parser_parse_expression_right(parser, expression, precedence)) {
         return false;
     }
-
-    if (parser->token_next.type == TOKEN_LEFT_PAREN) {
-        parser_next(parser);
-        if (!parser_parse_call_expression(parser, expression)) {
-            return false;
-        }
-    }
     return true;
+}
+
+bool parser_parse_expression_next(Parser* parser, Expression* expression, Precedence precedence)
+{
+    parser_next(parser);
+    return parser_parse_expression(parser, expression, precedence);
 }
 
 bool parser_parse_let_statement(Parser* parser, Statement* statement)
@@ -349,10 +342,7 @@ bool parser_parse_let_statement(Parser* parser, Statement* statement)
 
     if (!parser_next_expect(parser, TOKEN_ASSIGN, ERROR_LET_TOKEN_ASSIGN)) {
         return false;
-    }
-
-    parser_next(parser);
-    if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
+    } else if (!parser_parse_expression_next(parser, &statement->expression, PRECEDENCE_LOWEST)) {
         return false;
     }
 
@@ -363,8 +353,7 @@ bool parser_parse_let_statement(Parser* parser, Statement* statement)
 
 bool parser_parse_return_statement(Parser* parser, Statement* statement)
 {
-    parser_next(parser);
-    if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
+    if (!parser_parse_expression_next(parser, &statement->expression, PRECEDENCE_LOWEST)) {
         return false;
     }
 

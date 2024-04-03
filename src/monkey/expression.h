@@ -123,5 +123,7 @@ bool expression_init_call(Expression*, Expression*);
 bool expression_init_puts(Expression*);
 void expression_free(const Expression*);
 void expression_print(const Expression*);
+bool function_parameter_new(FunctionParameter**, const String*);
+bool function_argument_new(FunctionArgument**);
 
 #endif // MONKEY_EXPRESSION_H_
