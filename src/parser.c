@@ -207,7 +207,23 @@ bool parser_parse_call_expression(Parser* parser, Expression* expression)
     if (!expression_init_call(expression, expression_move(expression))) {
         return false;
     }
-    return parser_parse_call_arguments(parser, expression, &expression->call.arguments);
+
+    return true;
+}
+
+bool parser_parse_macro_expression(Parser* parser, Expression* expression)
+{
+    return false;
+}
+
+bool parser_parse_quote_expression(Parser* parser, Expression* expression)
+{
+    return false;
+}
+
+bool parser_parse_unquote_expression(Parser* parser, Expression* expression)
+{
+    return false;
 }
 
 bool parser_parse_expression_left(Parser* parser, Expression* expression)
@@ -232,6 +248,12 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
         return parser_parse_conditional_expression(parser, expression);
     case TOKEN_FUNCTION:
         return parser_parse_function_expression(parser, expression);
+    case TOKEN_MACRO:
+        return parser_parse_macro_expression(parser, expression);
+    case TOKEN_QUOTE:
+        return parser_parse_quote_expression(parser, expression);
+    case TOKEN_UNQUOTE:
+        return parser_parse_unquote_expression(parser, expression);
     default:
         parser_error(parser, ERROR_TOKEN_UNEXPECTED);
         return false;

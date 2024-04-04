@@ -18,6 +18,9 @@ enum TokenType {
     TOKEN_ELSE,
     TOKEN_FUNCTION,
     TOKEN_RETURN,
+    TOKEN_MACRO,
+    TOKEN_QUOTE,
+    TOKEN_UNQUOTE,
     // literals
     TOKEN_INTEGER,
     TOKEN_STRING,

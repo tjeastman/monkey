@@ -269,6 +269,12 @@ Token lexer_token_next(Lexer* lexer)
         token.type = TOKEN_TRUE;
     } else if (strncmp(token.lexeme.value, "false", 5) == 0) {
         token.type = TOKEN_FALSE;
+    } else if (strncmp(token.lexeme.value, "macro", 5) == 0) {
+        token.type = TOKEN_MACRO;
+    } else if (strncmp(token.lexeme.value, "quote", 5) == 0) {
+        token.type = TOKEN_QUOTE;
+    } else if (strncmp(token.lexeme.value, "unquote", 7) == 0) {
+        token.type = TOKEN_UNQUOTE;
     }
     return token;
 }
