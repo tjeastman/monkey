@@ -4,37 +4,23 @@
 #include "monkey/error.h"
 #include "monkey/token.h"
 
-void errors_free(ErrorList* errors)
+void error_init(Error* error)
 {
-    for (Error* error = errors->head; error != NULL; error = error->next) {
-        token_free(&error->token);
-    }
-    errors->head = NULL;
-    errors->tail = NULL;
+    error->type = ERROR_NONE;
+    token_init(&error->token, 0, 0);
 }
 
-void errors_append(ErrorList* errors, ErrorType type, const Token* token)
+void error_free(const Error* error)
 {
-    Error* error = (Error*)malloc(sizeof(Error));
-    error->next = NULL;
-    error->type = type;
-    token_copy(&error->token, token);
-
-    if (errors->head == NULL) {
-        errors->head = error;
-    }
-    if (errors->tail == NULL) {
-        errors->tail = error;
-    } else {
-        errors->tail->next = error;
-        errors->tail = error;
-    }
+    token_free(&error->token);
 }
 
 void error_print(const Error* error)
 {
     printf("%zu:%zd: ", error->token.line, error->token.position);
     switch (error->type) {
+    case ERROR_NONE:
+        break;
     case ERROR_LET_TOKEN_ASSIGN:
         printf("expected assignment op in let statement: %s", error->token.lexeme.value);
         break;
@@ -72,14 +58,10 @@ void error_print(const Error* error)
         printf("expected identifier in function expression\n");
         break;
     case ERROR_EXPRESSION_FUNCTION_EXPECTED_COMMA:
-        printf("expected comma in function expression\n");
+        printf("expected comma in function parameters\n");
         break;
-    }
-}
-
-void errors_print(const ErrorList* errors)
-{
-    for (Error* error = errors->head; error != NULL; error = error->next) {
-        error_print(error);
+    case ERROR_EXPRESSION_CALL_EXPECTED_COMMA:
+        printf("expected comma in function arguments\n");
+        break;
     }
 }

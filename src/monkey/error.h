@@ -7,6 +7,7 @@
 
 typedef enum ErrorType ErrorType;
 enum ErrorType {
+    ERROR_NONE,
     ERROR_LET_TOKEN_ASSIGN,
     ERROR_LET_TOKEN_IDENTIFIER,
     ERROR_TOKEN_ILLEGAL,
@@ -30,14 +31,8 @@ struct Error {
     Token token;
 };
 
-typedef struct ErrorList ErrorList;
-struct ErrorList {
-    Error* head;
-    Error* tail;
-};
-
-void errors_free(ErrorList*);
-void errors_append(ErrorList*, ErrorType, const Token*);
-void errors_print(const ErrorList*);
+void error_init(Error*);
+void error_free(const Error*);
+void error_print(const Error*);
 
 #endif // MONKEY_ERROR_H_

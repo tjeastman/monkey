@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "monkey/error.h"
 #include "monkey/eval.h"
 #include "monkey/lexer.h"
 #include "monkey/parser.h"
@@ -38,7 +39,7 @@ bool parse(FILE* file)
     if (result) {
         statement_block_print(&block);
     } else {
-        errors_print(&parser.errors);
+        error_print(&parser.error);
     }
 
     statement_block_free(&block);
@@ -59,7 +60,7 @@ bool eval(FILE* file)
     if (result) {
         evaluate_program(&block);
     } else {
-        errors_print(&parser.errors);
+        error_print(&parser.error);
     }
 
     statement_block_free(&block);

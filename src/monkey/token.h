@@ -59,7 +59,7 @@ struct Token {
 };
 
 void token_init(Token*, size_t, ssize_t);
-void token_free(Token*);
+void token_free(const Token*);
 void token_reset(Token*);
 void token_append(Token*, char);
 void token_copy(Token*, const Token*);

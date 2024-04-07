@@ -14,14 +14,13 @@ void parser_init(Parser* parser, FILE* file)
     lexer_init(&parser->lexer, file);
     token_init(&parser->token, parser->lexer.line, parser->lexer.position);
     parser->token_next = lexer_token_next(&parser->lexer);
-    parser->errors.head = NULL;
-    parser->errors.tail = NULL;
+    error_init(&parser->error);
 }
 
 void parser_free(Parser* parser)
 {
     token_free(&parser->token);
-    errors_free(&parser->errors);
+    error_free(&parser->error);
 }
 
 bool parser_next(Parser* parser)
@@ -30,6 +29,12 @@ bool parser_next(Parser* parser)
     parser->token = parser->token_next;
     parser->token_next = lexer_token_next(&parser->lexer);
     return parser->token.type != TOKEN_END && parser->token.type != TOKEN_ILLEGAL;
+}
+
+void parser_error(Parser* parser, ErrorType type)
+{
+    parser->error.type = type;
+    token_copy(&parser->error.token, &parser->token);
 }
 
 bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Operation operation)
@@ -46,7 +51,7 @@ bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
     if (!parser_parse_expression(parser, expression, PRECEDENCE_LOWEST)) {
         return false;
     } else if (parser->token_next.type != TOKEN_RIGHT_PAREN) {
-        errors_append(&parser->errors, ERROR_EXPRESSION_GROUP_EXPECTED_PAREN, &parser->token);
+        parser_error(parser, ERROR_EXPRESSION_GROUP_EXPECTED_PAREN);
         return false;
     }
     parser_next(parser);
@@ -57,7 +62,7 @@ bool parser_parse_block_expression(Parser* parser, StatementBlock* block)
 {
     parser_next(parser);
     if (parser->token.type != TOKEN_LEFT_BRACE) {
-        errors_append(&parser->errors, ERROR_EXPRESSION_BLOCK_EXPECTED_LEFT_BRACE, &parser->token);
+        parser_error(parser, ERROR_EXPRESSION_BLOCK_EXPECTED_LEFT_BRACE);
         return false;
     }
 
@@ -80,7 +85,7 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
 {
     parser_next(parser);
     if (parser->token.type != TOKEN_LEFT_PAREN) {
-        errors_append(&parser->errors, ERROR_EXPRESSION_IF_EXPECTED_LEFT_PAREN, &parser->token);
+        parser_error(parser, ERROR_EXPRESSION_IF_EXPECTED_LEFT_PAREN);
         return false;
     }
 
@@ -93,7 +98,7 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
 
     parser_next(parser);
     if (parser->token.type != TOKEN_RIGHT_PAREN) {
-        errors_append(&parser->errors, ERROR_EXPRESSION_IF_EXPECTED_RIGHT_PAREN, &parser->token);
+        parser_error(parser, ERROR_EXPRESSION_IF_EXPECTED_RIGHT_PAREN);
         return false;
     }
 
@@ -120,7 +125,7 @@ bool parser_parse_function_expression_parameters(Parser* parser, FunctionParamet
     parser_next(parser);
     while (parser->token.type != TOKEN_RIGHT_PAREN) {
         if (parser->token.type != TOKEN_IDENTIFIER) {
-            errors_append(&parser->errors, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER, &parser->token);
+            parser_error(parser, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER);
             return false;
         }
 
@@ -140,7 +145,7 @@ bool parser_parse_function_expression_parameters(Parser* parser, FunctionParamet
         } else if (parser->token.type == TOKEN_COMMA) {
             parser_next(parser);
         } else {
-            errors_append(&parser->errors, ERROR_EXPRESSION_FUNCTION_EXPECTED_COMMA, &parser->token);
+            parser_error(parser, ERROR_EXPRESSION_FUNCTION_EXPECTED_COMMA);
             return false;
         }
     }
@@ -152,7 +157,7 @@ bool parser_parse_function_expression(Parser* parser, Expression* expression)
 {
     parser_next(parser);
     if (parser->token.type != TOKEN_LEFT_PAREN) {
-        errors_append(&parser->errors, ERROR_EXPRESSION_FUNCTION_EXPECTED_LEFT_PAREN, &parser->token);
+        parser_error(parser, ERROR_EXPRESSION_FUNCTION_EXPECTED_LEFT_PAREN);
         return false;
     }
 
@@ -194,7 +199,7 @@ bool parser_parse_call_expression_arguments(Parser* parser, Expression* expressi
         } else if (parser->token.type == TOKEN_COMMA) {
             parser_next(parser);
         } else {
-            errors_append(&parser->errors, ERROR_EXPRESSION_CALL_EXPECTED_COMMA, &parser->token);
+            parser_error(parser, ERROR_EXPRESSION_CALL_EXPECTED_COMMA);
             return false;
         }
     }
@@ -217,7 +222,7 @@ bool parser_parse_puts_expression(Parser* parser, Expression* expression)
 {
     parser_next(parser);
     if (parser->token.type != TOKEN_LEFT_PAREN) {
-        errors_append(&parser->errors, ERROR_EXPRESSION_PUTS_EXPECTED_LEFT_PAREN, &parser->token);
+        parser_error(parser, ERROR_EXPRESSION_PUTS_EXPECTED_LEFT_PAREN);
         return false;
     }
 
@@ -231,7 +236,7 @@ bool parser_parse_puts_expression(Parser* parser, Expression* expression)
 
     parser_next(parser);
     if (parser->token.type != TOKEN_RIGHT_PAREN) {
-        errors_append(&parser->errors, ERROR_EXPRESSION_PUTS_EXPECTED_RIGHT_PAREN, &parser->token);
+        parser_error(parser, ERROR_EXPRESSION_PUTS_EXPECTED_RIGHT_PAREN);
         return false;
     }
 
@@ -263,7 +268,7 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
     case TOKEN_PUTS:
         return parser_parse_puts_expression(parser, expression);
     default:
-        errors_append(&parser->errors, ERROR_TOKEN_UNEXPECTED, &parser->token);
+        parser_error(parser, ERROR_TOKEN_UNEXPECTED);
         return false;
     }
 }
@@ -342,7 +347,7 @@ bool parser_parse_let_statement(Parser* parser, Statement* statement)
 {
     parser_next(parser);
     if (parser->token.type != TOKEN_IDENTIFIER) {
-        errors_append(&parser->errors, ERROR_LET_TOKEN_IDENTIFIER, &parser->token);
+        parser_error(parser, ERROR_LET_TOKEN_IDENTIFIER);
         return false;
     }
 
@@ -351,7 +356,7 @@ bool parser_parse_let_statement(Parser* parser, Statement* statement)
 
     parser_next(parser);
     if (parser->token.type != TOKEN_ASSIGN) {
-        errors_append(&parser->errors, ERROR_LET_TOKEN_ASSIGN, &parser->token);
+        parser_error(parser, ERROR_LET_TOKEN_ASSIGN);
         return false;
     }
 
@@ -408,10 +413,12 @@ bool parser_parse_program(Parser* parser, StatementBlock* block)
             statement_block_extend(block, &statement);
         } else {
             statement_free(&statement);
+            return false;
         }
     }
     if (parser->token.type == TOKEN_ILLEGAL) {
-        errors_append(&parser->errors, ERROR_TOKEN_ILLEGAL, &parser->token);
+        parser_error(parser, ERROR_TOKEN_ILLEGAL);
+        return false;
     }
-    return parser->errors.head == NULL;
+    return true;
 }

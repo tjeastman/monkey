@@ -14,7 +14,7 @@ struct Parser {
     Lexer lexer;
     Token token;
     Token token_next;
-    ErrorList errors;
+    Error error;
 };
 
 void parser_init(Parser*, FILE*);

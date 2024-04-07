@@ -11,7 +11,7 @@ void token_init(Token* token, size_t line, ssize_t position)
     string_init(&token->lexeme);
 }
 
-void token_free(Token* token)
+void token_free(const Token* token)
 {
     string_free(&token->lexeme);
 }
