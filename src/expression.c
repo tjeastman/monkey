@@ -85,6 +85,14 @@ bool expression_init_function(Expression* expression)
     return true;
 }
 
+bool expression_init_call(Expression* expression, Expression* function)
+{
+    expression->type = EXPRESSION_CALL;
+    expression->call.function = function;
+    expression->call.arguments = NULL;
+    return true;
+}
+
 void expression_free_prefix(const PrefixExpression* expression)
 {
     expression_free(expression->operand);

@@ -119,6 +119,7 @@ bool expression_init_prefix(Expression*, Operation);
 bool expression_init_infix(Expression*, Expression*, Operation);
 bool expression_init_conditional(Expression*);
 bool expression_init_function(Expression*);
+bool expression_init_call(Expression*, Expression*);
 void expression_free(const Expression*);
 void expression_print(const Expression*);
 

@@ -209,12 +209,9 @@ bool parser_parse_call_expression_arguments(Parser* parser, Expression* expressi
 
 bool parser_parse_call_expression(Parser* parser, Expression* expression)
 {
-    Expression* function = expression_move(expression);
-
-    expression->type = EXPRESSION_CALL;
-    expression->call.function = function;
-    expression->call.arguments = NULL;
-
+    if (!expression_init_call(expression, expression_move(expression))) {
+        return false;
+    }
     return parser_parse_call_expression_arguments(parser, expression, &expression->call.arguments);
 }
 
@@ -314,9 +311,9 @@ bool parser_parse_expression_right(Parser* parser, Expression* expression, Prece
             return true;
         }
 
-        Expression* expression_left = expression_move(expression);
-
-        expression_init_infix(expression, expression_left, operation);
+        if (!expression_init_infix(expression, expression_move(expression), operation)) {
+            return false;
+        }
 
         parser_next(parser);
         parser_next(parser);
