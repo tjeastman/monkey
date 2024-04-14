@@ -74,7 +74,7 @@ bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
     return true;
 }
 
-bool parser_parse_block_expression(Parser* parser, StatementBlock* block)
+bool parser_parse_block_expression(Parser* parser, Statement** statements)
 {
     if (!parser_next_expect(parser, TOKEN_LEFT_BRACE, ERROR_EXPRESSION_BLOCK_EXPECTED_LEFT_BRACE)) {
         return false;
@@ -82,13 +82,11 @@ bool parser_parse_block_expression(Parser* parser, StatementBlock* block)
 
     parser_next(parser);
     while (parser->token.type != TOKEN_RIGHT_BRACE) {
-        Statement statement;
-        statement_init(&statement);
-        if (!parser_parse_statement(parser, &statement)) {
-            statement_free(&statement);
+        *statements = statement_new();
+        if (!parser_parse_statement(parser, *statements)) {
             return false;
         }
-        statement_block_extend(block, &statement);
+        statements = &(*statements)->next;
         parser_next(parser);
     }
 
@@ -107,19 +105,13 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
         return false;
     }
 
-    expression->conditional.consequence = (StatementBlock*)malloc(sizeof(StatementBlock));
-    statement_block_init(expression->conditional.consequence);
-
-    if (!parser_parse_block_expression(parser, expression->conditional.consequence)) {
+    if (!parser_parse_block_expression(parser, &expression->conditional.consequence)) {
         return false;
     } else if (!parser_next_if(parser, TOKEN_ELSE)) {
         return true;
     }
 
-    expression->conditional.alternate = (StatementBlock*)malloc(sizeof(StatementBlock));
-    statement_block_init(expression->conditional.alternate);
-
-    return parser_parse_block_expression(parser, expression->conditional.alternate);
+    return parser_parse_block_expression(parser, &expression->conditional.alternate);
 }
 
 bool parser_parse_function_parameters(Parser* parser, FunctionParameter** parameters)
@@ -162,10 +154,7 @@ bool parser_parse_function_expression(Parser* parser, Expression* expression)
         return false;
     }
 
-    expression->function.body = (StatementBlock*)malloc(sizeof(StatementBlock));
-    statement_block_init(expression->function.body);
-
-    return parser_parse_block_expression(parser, expression->function.body);
+    return parser_parse_block_expression(parser, &expression->function.body);
 }
 
 bool parser_parse_call_argument(Parser* parser, FunctionArgument** arguments)
@@ -387,17 +376,14 @@ bool parser_parse_statement(Parser* parser, Statement* statement)
     }
 }
 
-bool parser_parse_program(Parser* parser, StatementBlock* block)
+bool parser_parse_program(Parser* parser, Statement** statements)
 {
     while (parser_next(parser)) {
-        Statement statement;
-        statement_init(&statement);
-        if (parser_parse_statement(parser, &statement)) {
-            statement_block_extend(block, &statement);
-        } else {
-            statement_free(&statement);
+        *statements = statement_new();
+        if (!parser_parse_statement(parser, *statements)) {
             return false;
         }
+        statements = &(*statements)->next;
     }
     if (parser->token.type == TOKEN_ILLEGAL) {
         parser_error(parser, ERROR_TOKEN_ILLEGAL);

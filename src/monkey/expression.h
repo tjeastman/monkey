@@ -6,7 +6,7 @@
 #include "monkey/operation.h"
 #include "monkey/string.h"
 
-typedef struct StatementBlock StatementBlock;
+typedef struct Statement Statement;
 
 typedef enum ExpressionType ExpressionType;
 enum ExpressionType {
@@ -60,8 +60,8 @@ struct InfixExpression {
 typedef struct ConditionalExpression ConditionalExpression;
 struct ConditionalExpression {
     Expression* condition;
-    StatementBlock* consequence;
-    StatementBlock* alternate;
+    Statement* consequence;
+    Statement* alternate;
 };
 
 typedef struct PutsExpression PutsExpression;
@@ -78,7 +78,7 @@ struct FunctionParameter {
 typedef struct FunctionExpression FunctionExpression;
 struct FunctionExpression {
     FunctionParameter* parameters;
-    StatementBlock* body;
+    Statement* body;
 };
 
 typedef struct FunctionArgument FunctionArgument;

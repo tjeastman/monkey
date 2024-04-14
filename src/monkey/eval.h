@@ -7,6 +7,6 @@
 
 bool evaluate_expression(Environment*, Expression*, Object*);
 bool evaluate_statement(Environment*, Statement*, Object*);
-void evaluate_program(StatementBlock*);
+void evaluate_program(Statement*);
 
 #endif // MONKEY_EVAL_H_

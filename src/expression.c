@@ -6,8 +6,8 @@
 #include "monkey/operation.h"
 #include "monkey/string.h"
 
-void statement_block_free(const StatementBlock*);
-void statement_block_print(const StatementBlock*);
+void statement_free(const Statement*);
+void statement_print(const Statement*);
 
 Expression* expression_new()
 {
@@ -119,11 +119,11 @@ void expression_free_conditional(const ConditionalExpression* expression)
     expression_free(expression->condition);
     free(expression->condition);
     if (expression->consequence != NULL) {
-        statement_block_free(expression->consequence);
+        statement_free(expression->consequence);
         free(expression->consequence);
     }
     if (expression->alternate != NULL) {
-        statement_block_free(expression->alternate);
+        statement_free(expression->alternate);
         free(expression->alternate);
     }
 }
@@ -144,7 +144,7 @@ void expression_free_function(const FunctionExpression* expression)
         free(expression->parameters);
     }
     if (expression->body != NULL) {
-        statement_block_free(expression->body);
+        statement_free(expression->body);
         free(expression->body);
     }
 }
@@ -232,12 +232,12 @@ void expression_print_conditional(ConditionalExpression expression)
     printf(")");
     if (expression.consequence != NULL) {
         printf(" {\n    ");
-        statement_block_print(expression.consequence);
+        statement_print(expression.consequence);
         printf("}");
     }
     if (expression.alternate != NULL) {
         printf(" else {\n    ");
-        statement_block_print(expression.alternate);
+        statement_print(expression.alternate);
         printf("}");
     }
 }
@@ -258,7 +258,7 @@ void expression_print_function(FunctionExpression expression)
     printf("fn(");
     expression_print_function_parameters(expression.parameters);
     printf(") {\n    ");
-    statement_block_print(expression.body);
+    statement_print(expression.body);
     putchar('\n');
     putchar('}');
 }

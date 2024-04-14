@@ -194,9 +194,9 @@ bool evaluate_infix_expression(Environment* environment, InfixExpression* expres
     }
 }
 
-bool evaluate_statement_block_aux(Environment* environment, StatementBlock* block, Object* object)
+bool evaluate_statement_block_aux(Environment* environment, Statement* statement, Object* object)
 {
-    for (Statement* statement = block->head; statement != NULL; statement = statement->next) {
+    for (; statement != NULL; statement = statement->next) {
         if (!evaluate_statement(environment, statement, object)) {
             return false;
         } else if (object->returned) {
@@ -206,10 +206,10 @@ bool evaluate_statement_block_aux(Environment* environment, StatementBlock* bloc
     return true;
 }
 
-bool evaluate_statement_block(Environment* environment, StatementBlock* block, Object* object)
+bool evaluate_statement_block(Environment* environment, Statement* statement, Object* object)
 {
     environment = environment_push(environment);
-    bool result = evaluate_statement_block_aux(environment, block, object);
+    bool result = evaluate_statement_block_aux(environment, statement, object);
     environment_pop(environment);
     return result;
 }
@@ -370,11 +370,11 @@ bool evaluate_statement(Environment* environment, Statement* statement, Object* 
     }
 }
 
-void evaluate_program(StatementBlock* block)
+void evaluate_program(Statement* statement)
 {
     Environment* environment = environment_push(NULL);
     Object object;
     object_init(&object);
-    evaluate_statement_block_aux(environment, block, &object);
+    evaluate_statement_block_aux(environment, statement, &object);
     environment_pop(environment);
 }

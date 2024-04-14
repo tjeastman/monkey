@@ -32,17 +32,16 @@ bool parse(FILE* file)
     Parser parser;
     parser_init(&parser, file);
 
-    StatementBlock block;
-    statement_block_init(&block);
+    Statement* statement = NULL;
 
-    bool result = parser_parse_program(&parser, &block);
+    bool result = parser_parse_program(&parser, &statement);
     if (result) {
-        statement_block_print(&block);
+        statement_print(statement);
     } else {
         error_print(&parser.error);
     }
 
-    statement_block_free(&block);
+    statement_free(statement);
     parser_free(&parser);
 
     return result;
@@ -53,17 +52,16 @@ bool eval(FILE* file)
     Parser parser;
     parser_init(&parser, file);
 
-    StatementBlock block;
-    statement_block_init(&block);
+    Statement* statement = NULL;
 
-    bool result = parser_parse_program(&parser, &block);
+    bool result = parser_parse_program(&parser, &statement);
     if (result) {
-        evaluate_program(&block);
+        evaluate_program(statement);
     } else {
         error_print(&parser.error);
     }
 
-    statement_block_free(&block);
+    statement_free(statement);
     parser_free(&parser);
 
     return result;

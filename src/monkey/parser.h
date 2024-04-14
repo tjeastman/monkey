@@ -22,6 +22,6 @@ void parser_free(Parser*);
 bool parser_parse_expression(Parser*, Expression*, Precedence);
 bool parser_parse_expression_next(Parser*, Expression*, Precedence);
 bool parser_parse_statement(Parser*, Statement*);
-bool parser_parse_program(Parser*, StatementBlock*);
+bool parser_parse_program(Parser*, Statement**);
 
 #endif // MONKEY_PARSER_H_
