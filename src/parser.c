@@ -37,6 +37,25 @@ void parser_error(Parser* parser, ErrorType type)
     token_copy(&parser->error.token, &parser->token);
 }
 
+bool parser_next_if(Parser* parser, TokenType token_type)
+{
+    if (parser->token_next.type == token_type) {
+        parser_next(parser);
+        return true;
+    }
+    return false;
+}
+
+bool parser_next_expect(Parser* parser, TokenType token_type, ErrorType error_type)
+{
+    parser_next(parser);
+    if (parser->token.type != token_type) {
+        parser_error(parser, error_type);
+        return false;
+    }
+    return true;
+}
+
 bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Operation operation)
 {
     expression_init_prefix(expression, operation);
@@ -50,19 +69,16 @@ bool parser_parse_grouped_expression(Parser* parser, Expression* expression)
     parser_next(parser);
     if (!parser_parse_expression(parser, expression, PRECEDENCE_LOWEST)) {
         return false;
-    } else if (parser->token_next.type != TOKEN_RIGHT_PAREN) {
+    } else if (!parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
         parser_error(parser, ERROR_EXPRESSION_GROUP_EXPECTED_PAREN);
         return false;
     }
-    parser_next(parser);
     return true;
 }
 
 bool parser_parse_block_expression(Parser* parser, StatementBlock* block)
 {
-    parser_next(parser);
-    if (parser->token.type != TOKEN_LEFT_BRACE) {
-        parser_error(parser, ERROR_EXPRESSION_BLOCK_EXPECTED_LEFT_BRACE);
+    if (!parser_next_expect(parser, TOKEN_LEFT_BRACE, ERROR_EXPRESSION_BLOCK_EXPECTED_LEFT_BRACE)) {
         return false;
     }
 
@@ -83,22 +99,16 @@ bool parser_parse_block_expression(Parser* parser, StatementBlock* block)
 
 bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
 {
-    parser_next(parser);
-    if (parser->token.type != TOKEN_LEFT_PAREN) {
-        parser_error(parser, ERROR_EXPRESSION_IF_EXPECTED_LEFT_PAREN);
+    if (!parser_next_expect(parser, TOKEN_LEFT_PAREN, ERROR_EXPRESSION_IF_EXPECTED_LEFT_PAREN)) {
+        return false;
+    } else if (!expression_init_conditional(expression)) {
         return false;
     }
-
-    expression_init_conditional(expression);
 
     parser_next(parser);
     if (!parser_parse_expression(parser, expression->conditional.condition, PRECEDENCE_LOWEST)) {
         return false;
-    }
-
-    parser_next(parser);
-    if (parser->token.type != TOKEN_RIGHT_PAREN) {
-        parser_error(parser, ERROR_EXPRESSION_IF_EXPECTED_RIGHT_PAREN);
+    } else if (!parser_next_expect(parser, TOKEN_RIGHT_PAREN, ERROR_EXPRESSION_IF_EXPECTED_RIGHT_PAREN)) {
         return false;
     }
 
@@ -107,10 +117,9 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
 
     if (!parser_parse_block_expression(parser, expression->conditional.consequence)) {
         return false;
-    } else if (parser->token_next.type != TOKEN_ELSE) {
+    } else if (!parser_next_if(parser, TOKEN_ELSE)) {
         return true;
     }
-    parser_next(parser);
 
     expression->conditional.alternate = (StatementBlock*)malloc(sizeof(StatementBlock));
     statement_block_init(expression->conditional.alternate);
@@ -155,15 +164,11 @@ bool parser_parse_function_expression_parameters(Parser* parser, FunctionParamet
 
 bool parser_parse_function_expression(Parser* parser, Expression* expression)
 {
-    parser_next(parser);
-    if (parser->token.type != TOKEN_LEFT_PAREN) {
-        parser_error(parser, ERROR_EXPRESSION_FUNCTION_EXPECTED_LEFT_PAREN);
+    if (!parser_next_expect(parser, TOKEN_LEFT_PAREN, ERROR_EXPRESSION_FUNCTION_EXPECTED_LEFT_PAREN)) {
         return false;
-    }
-
-    expression_init_function(expression);
-
-    if (!parser_parse_function_expression_parameters(parser, &expression->function.parameters)) {
+    } else if (!expression_init_function(expression)) {
+        return false;
+    } else if (!parser_parse_function_expression_parameters(parser, &expression->function.parameters)) {
         return false;
     }
 
@@ -217,9 +222,7 @@ bool parser_parse_call_expression(Parser* parser, Expression* expression)
 
 bool parser_parse_puts_expression(Parser* parser, Expression* expression)
 {
-    parser_next(parser);
-    if (parser->token.type != TOKEN_LEFT_PAREN) {
-        parser_error(parser, ERROR_EXPRESSION_PUTS_EXPECTED_LEFT_PAREN);
+    if (!parser_next_expect(parser, TOKEN_LEFT_PAREN, ERROR_EXPRESSION_PUTS_EXPECTED_LEFT_PAREN)) {
         return false;
     }
 
@@ -229,11 +232,7 @@ bool parser_parse_puts_expression(Parser* parser, Expression* expression)
     parser_next(parser);
     if (!parser_parse_expression(parser, expression->puts.expression, PRECEDENCE_LOWEST)) {
         return false;
-    }
-
-    parser_next(parser);
-    if (parser->token.type != TOKEN_RIGHT_PAREN) {
-        parser_error(parser, ERROR_EXPRESSION_PUTS_EXPECTED_RIGHT_PAREN);
+    } else if (!parser_next_expect(parser, TOKEN_RIGHT_PAREN, ERROR_EXPRESSION_PUTS_EXPECTED_RIGHT_PAREN)) {
         return false;
     }
 
@@ -342,27 +341,24 @@ bool parser_parse_expression(Parser* parser, Expression* expression, Precedence 
 
 bool parser_parse_let_statement(Parser* parser, Statement* statement)
 {
-    parser_next(parser);
-    if (parser->token.type != TOKEN_IDENTIFIER) {
-        parser_error(parser, ERROR_LET_TOKEN_IDENTIFIER);
+    if (!parser_next_expect(parser, TOKEN_IDENTIFIER, ERROR_LET_TOKEN_IDENTIFIER)) {
         return false;
     }
 
     statement->identifier = (String*)malloc(sizeof(String));
     string_copy(statement->identifier, &parser->token.lexeme);
 
-    parser_next(parser);
-    if (parser->token.type != TOKEN_ASSIGN) {
-        parser_error(parser, ERROR_LET_TOKEN_ASSIGN);
+    if (!parser_next_expect(parser, TOKEN_ASSIGN, ERROR_LET_TOKEN_ASSIGN)) {
         return false;
     }
 
     parser_next(parser);
     if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
         return false;
-    } else if (parser->token_next.type == TOKEN_SEMICOLON) {
-        parser_next(parser);
     }
+
+    parser_next_if(parser, TOKEN_SEMICOLON);
+
     return true;
 }
 
@@ -371,9 +367,10 @@ bool parser_parse_return_statement(Parser* parser, Statement* statement)
     parser_next(parser);
     if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
         return false;
-    } else if (parser->token_next.type == TOKEN_SEMICOLON) {
-        parser_next(parser);
     }
+
+    parser_next_if(parser, TOKEN_SEMICOLON);
+
     return true;
 }
 
@@ -381,9 +378,10 @@ bool parser_parse_expression_statement(Parser* parser, Statement* statement)
 {
     if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
         return false;
-    } else if (parser->token_next.type == TOKEN_SEMICOLON) {
-        parser_next(parser);
     }
+
+    parser_next_if(parser, TOKEN_SEMICOLON);
+
     return true;
 }
 
