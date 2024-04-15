@@ -224,10 +224,9 @@ bool parser_parse_puts_expression(Parser* parser, Expression* expression)
 {
     if (!parser_next_expect(parser, TOKEN_LEFT_PAREN, ERROR_EXPRESSION_PUTS_EXPECTED_LEFT_PAREN)) {
         return false;
+    } else if (!expression_init_puts(expression)) {
+        return false;
     }
-
-    expression->type = EXPRESSION_PUTS;
-    expression->puts.expression = expression_new();
 
     parser_next(parser);
     if (!parser_parse_expression(parser, expression->puts.expression, PRECEDENCE_LOWEST)) {

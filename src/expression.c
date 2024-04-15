@@ -93,6 +93,13 @@ bool expression_init_call(Expression* expression, Expression* function)
     return true;
 }
 
+bool expression_init_puts(Expression* expression)
+{
+    expression->type = EXPRESSION_PUTS;
+    expression->puts.expression = expression_new();
+    return true;
+}
+
 void expression_free_prefix(const PrefixExpression* expression)
 {
     expression_free(expression->operand);
