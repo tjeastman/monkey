@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,6 +51,18 @@ void string_copy(String* string, const String* source)
         string->value = (char*)malloc(source->size);
         memcpy(string->value, source->value, source->size);
     }
+}
+
+bool string_equal(const String* string, const String* string_alt)
+{
+    if (string->value == NULL && string_alt->value == NULL) {
+        return true;
+    } else if (string->value == NULL) {
+        return false;
+    } else if (string_alt->value == NULL) {
+        return false;
+    }
+    return strcmp(string->value, string_alt->value) == 0;
 }
 
 void string_print(const String* string)

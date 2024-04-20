@@ -11,9 +11,15 @@ void environment_init(Environment* environment, Environment* environment_next)
     environment->next = environment_next;
 }
 
+void environment_free_aux(void* object)
+{
+    object_free((Object*)object);
+    free(object);
+}
+
 void environment_free(Environment* environment)
 {
-    hash_free(&environment->table);
+    hash_free(&environment->table, environment_free_aux);
 }
 
 bool environment_insert(Environment* environment, const String* string, const Object* source)
@@ -24,6 +30,7 @@ bool environment_insert(Environment* environment, const String* string, const Ob
         object_copy(object, source);
         hash_insert(&environment->table, string->value, object);
     } else {
+        object_free(object);
         object_copy(object, source);
     }
     return true;

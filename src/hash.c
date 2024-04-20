@@ -11,19 +11,19 @@ void hash_init(HashTable* table)
     }
 }
 
-void hash_bucket_free(HashBucket* bucket)
+void hash_bucket_free(HashBucket* bucket, void (*value_free)(void*))
 {
     if (bucket != NULL) {
-        hash_bucket_free(bucket->next);
-        free(bucket->value);
+        hash_bucket_free(bucket->next, value_free);
+        value_free(bucket->value);
         free(bucket);
     }
 }
 
-void hash_free(const HashTable* table)
+void hash_free(const HashTable* table, void (*ff)(void*))
 {
     for (size_t i = 0; i < 256; ++i) {
-        hash_bucket_free(table->buckets[i]);
+        hash_bucket_free(table->buckets[i], ff);
     }
 }
 
