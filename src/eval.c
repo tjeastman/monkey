@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "monkey/environment.h"
 #include "monkey/eval.h"
@@ -54,18 +53,7 @@ bool evaluate_prefix_expression(Environment* environment, PrefixExpression* expr
 
 bool evaluate_infix_comparison_operation(Operation operation, Object* object, Object* object_right)
 {
-    bool result;
-    if (object->type != object_right->type) {
-        result = false;
-    } else if (object->type == OBJECT_INTEGER) {
-        result = object->integer == object_right->integer;
-    } else if (object->type == OBJECT_BOOL) {
-        result = object->boolean == object_right->boolean;
-    } else if (object->type == OBJECT_STRING) {
-        result = strcmp(object->string, object_right->string) == 0;
-    } else {
-        return false;
-    }
+    bool result = object_equal(object, object_right);
 
     if (operation == OPERATION_NOT_EQUAL) {
         result = !result;
@@ -76,9 +64,8 @@ bool evaluate_infix_comparison_operation(Operation operation, Object* object, Ob
         return false;
     }
 
-    object->type = OBJECT_BOOL;
-    object->boolean = result;
-    return true;
+    object_free(object);
+    return object_init_bool(object, result);
 }
 
 bool evaluate_infix_inequality_operation(Operation operation, Object* object, Object* object_right)
@@ -111,9 +98,8 @@ bool evaluate_infix_inequality_operation(Operation operation, Object* object, Ob
         return false;
     }
 
-    object->type = OBJECT_BOOL;
-    object->boolean = result;
-    return true;
+    object_free(object);
+    return object_init_bool(object, result);
 }
 
 bool evaluate_infix_arithmetic_operation(Operation operation, Object* object, Object* object_right)
@@ -142,6 +128,27 @@ bool evaluate_infix_arithmetic_operation(Operation operation, Object* object, Ob
     return true;
 }
 
+bool evaluate_infix_expression_aux(Environment* environment, InfixExpression* expression, Object* object, Object* object_right)
+{
+    switch (expression->operation) {
+    case OPERATION_EQUAL:
+    case OPERATION_NOT_EQUAL:
+        return evaluate_infix_comparison_operation(expression->operation, object, object_right);
+    case OPERATION_GREATER:
+    case OPERATION_GREATER_EQUAL:
+    case OPERATION_LESS:
+    case OPERATION_LESS_EQUAL:
+        return evaluate_infix_inequality_operation(expression->operation, object, object_right);
+    case OPERATION_ADD:
+    case OPERATION_SUBTRACT:
+    case OPERATION_MULTIPLY:
+    case OPERATION_DIVIDE:
+        return evaluate_infix_arithmetic_operation(expression->operation, object, object_right);
+    default:
+        return false;
+    }
+}
+
 bool evaluate_infix_expression(Environment* environment, InfixExpression* expression, Object* object)
 {
     if (!evaluate_expression(environment, expression->operand[0], object)) {
@@ -153,23 +160,9 @@ bool evaluate_infix_expression(Environment* environment, InfixExpression* expres
         return false;
     }
 
-    switch (expression->operation) {
-    case OPERATION_EQUAL:
-    case OPERATION_NOT_EQUAL:
-        return evaluate_infix_comparison_operation(expression->operation, object, &object_right);
-    case OPERATION_GREATER:
-    case OPERATION_GREATER_EQUAL:
-    case OPERATION_LESS:
-    case OPERATION_LESS_EQUAL:
-        return evaluate_infix_inequality_operation(expression->operation, object, &object_right);
-    case OPERATION_ADD:
-    case OPERATION_SUBTRACT:
-    case OPERATION_MULTIPLY:
-    case OPERATION_DIVIDE:
-        return evaluate_infix_arithmetic_operation(expression->operation, object, &object_right);
-    default:
-        return false;
-    }
+    bool result = evaluate_infix_expression_aux(environment, expression, object, &object_right);
+    object_free(&object_right);
+    return result;
 }
 
 bool evaluate_statement_block_aux(Environment* environment, StatementBlock* block, Object* object)
@@ -179,6 +172,8 @@ bool evaluate_statement_block_aux(Environment* environment, StatementBlock* bloc
             return false;
         } else if (object->returned) {
             break;
+        } else if (statement->next != NULL) {
+            object_free(object);
         }
     }
     return true;
@@ -203,8 +198,8 @@ bool evaluate_conditional_expression(Environment* environment, ConditionalExpres
     }
 
     bool result = object->boolean;
+    object_free(object);
     if (!result && expression->alternate == NULL) {
-        object->type = OBJECT_NULL;
         return true;
     } else if (!result && !evaluate_statement_block(environment, expression->alternate, object)) {
         return false;
@@ -233,6 +228,7 @@ bool evaluate_call_expression_arguments(Environment* environment, FunctionParame
     } else if (!environment_insert(environment, &parameter->name, &object)) {
         return false;
     }
+    object_free(&object);
 
     return evaluate_call_expression_arguments(environment, parameter->next, argument->next);
 }
@@ -244,6 +240,7 @@ bool evaluate_call_expression(Environment* environment, CallExpression* expressi
         return false;
     } else if (object_fn.type != OBJECT_FUNCTION) {
         printf("*** EVALUATION ERROR: non-function object in call expression\n");
+        object_free(&object_fn);
         return false;
     }
 
@@ -251,15 +248,18 @@ bool evaluate_call_expression(Environment* environment, CallExpression* expressi
     environment_init(&environment_new, environment);
     if (!evaluate_call_expression_arguments(&environment_new, object_fn.function->parameters, expression->arguments)) {
         environment_free(&environment_new);
+        object_free(&object_fn);
         return false;
     } else if (!evaluate_statement_block_aux(&environment_new, object_fn.function->body, object)) {
         environment_free(&environment_new);
+        object_free(&object_fn);
         return false;
     } else if (object->returned) {
         object->returned = false;
     }
 
     environment_free(&environment_new);
+    object_free(&object_fn);
     return true;
 }
 
@@ -269,7 +269,7 @@ bool evaluate_puts_expression(Environment* environment, PutsExpression* expressi
         return false;
     }
     object_print(object);
-    object->type = OBJECT_NULL;
+    object_free(object);
     return true;
 }
 
@@ -309,7 +309,7 @@ bool evaluate_let_statement(Environment* environment, Statement* statement, Obje
     } else if (!environment_insert(environment, statement->identifier, object)) {
         return false;
     }
-    object->type = OBJECT_NULL;
+    object_free(object);
     return true;
 }
 
@@ -342,6 +342,8 @@ void evaluate_program(StatementBlock* block)
     Object object;
     Environment environment;
     environment_init(&environment, NULL);
-    evaluate_statement_block_aux(&environment, block, &object);
+    if (evaluate_statement_block_aux(&environment, block, &object)) {
+        object_free(&object);
+    }
     environment_free(&environment);
 }

@@ -14,7 +14,7 @@ struct HashTable {
 };
 
 void hash_init(HashTable*);
-void hash_free(const HashTable*);
+void hash_free(const HashTable*, void (*)(void*));
 void hash_insert(HashTable*, char*, void*);
 void* hash_retrieve(const HashTable*, const char*);
 

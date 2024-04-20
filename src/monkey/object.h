@@ -20,7 +20,7 @@ struct Object {
     ObjectType type;
     union {
         int integer;
-        char* string;
+        String* string;
         bool boolean;
         FunctionExpression* function;
     };
@@ -31,7 +31,9 @@ bool object_init_integer(Object*, int);
 bool object_init_string(Object*, String*);
 bool object_init_bool(Object*, bool);
 bool object_init_function(Object*, FunctionExpression*);
-void object_copy(Object*, const Object*);
+void object_free(Object*);
+bool object_copy(Object*, const Object*);
+bool object_equal(const Object*, const Object*);
 void object_print(const Object*);
 
 #endif // MONKEY_OBJECT_H_
