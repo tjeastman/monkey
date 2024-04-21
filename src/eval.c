@@ -186,9 +186,10 @@ bool evaluate_statement_block_aux(Environment* environment, StatementBlock* bloc
 
 bool evaluate_statement_block(Environment* environment, StatementBlock* block, Object* object)
 {
-    environment = environment_push(environment);
-    bool result = evaluate_statement_block_aux(environment, block, object);
-    environment_pop(environment);
+    Environment environment_new;
+    environment_init(&environment_new, environment);
+    bool result = evaluate_statement_block_aux(&environment_new, block, object);
+    environment_free(&environment_new);
     return result;
 }
 
@@ -229,9 +230,9 @@ bool evaluate_call_expression_arguments(Environment* environment, FunctionParame
     Object object;
     if (!evaluate_expression(environment->next, argument->expression, &object)) {
         return false;
+    } else if (!environment_insert(environment, &parameter->name, &object)) {
+        return false;
     }
-
-    environment_insert(environment, &parameter->name, &object);
 
     return evaluate_call_expression_arguments(environment, parameter->next, argument->next);
 }
@@ -246,18 +247,19 @@ bool evaluate_call_expression(Environment* environment, CallExpression* expressi
         return false;
     }
 
-    environment = environment_push(environment);
-    if (!evaluate_call_expression_arguments(environment, object_fn.function->parameters, expression->arguments)) {
-        environment_pop(environment);
+    Environment environment_new;
+    environment_init(&environment_new, environment);
+    if (!evaluate_call_expression_arguments(&environment_new, object_fn.function->parameters, expression->arguments)) {
+        environment_free(&environment_new);
         return false;
-    } else if (!evaluate_statement_block_aux(environment, object_fn.function->body, object)) {
-        environment_pop(environment);
+    } else if (!evaluate_statement_block_aux(&environment_new, object_fn.function->body, object)) {
+        environment_free(&environment_new);
         return false;
     } else if (object->returned) {
         object->returned = false;
     }
 
-    environment_pop(environment);
+    environment_free(&environment_new);
     return true;
 }
 
@@ -304,8 +306,9 @@ bool evaluate_let_statement(Environment* environment, Statement* statement, Obje
 {
     if (!evaluate_expression(environment, &statement->expression, object)) {
         return false;
+    } else if (!environment_insert(environment, statement->identifier, object)) {
+        return false;
     }
-    environment_insert(environment, statement->identifier, object);
     object->type = OBJECT_NULL;
     return true;
 }
@@ -336,8 +339,9 @@ bool evaluate_statement(Environment* environment, Statement* statement, Object* 
 
 void evaluate_program(StatementBlock* block)
 {
-    Environment* environment = environment_push(NULL);
     Object object;
-    evaluate_statement_block_aux(environment, block, &object);
-    environment_pop(environment);
+    Environment environment;
+    environment_init(&environment, NULL);
+    evaluate_statement_block_aux(&environment, block, &object);
+    environment_free(&environment);
 }

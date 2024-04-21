@@ -62,7 +62,7 @@ void hash_insert(HashTable* table, char* key, void* value)
     table->buckets[index] = bucket;
 }
 
-const void* hash_retrieve(const HashTable* table, const char* key)
+void* hash_retrieve(const HashTable* table, const char* key)
 {
     unsigned char index = hash_index(key);
 

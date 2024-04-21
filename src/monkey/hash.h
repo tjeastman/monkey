@@ -16,6 +16,6 @@ struct HashTable {
 void hash_init(HashTable*);
 void hash_free(const HashTable*);
 void hash_insert(HashTable*, char*, void*);
-const void* hash_retrieve(const HashTable*, const char*);
+void* hash_retrieve(const HashTable*, const char*);
 
 #endif // MONKEY_HASH_H_

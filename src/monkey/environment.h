@@ -9,13 +9,13 @@
 
 typedef struct Environment Environment;
 struct Environment {
-    HashTable* table;
+    HashTable table;
     Environment* next;
 };
 
-Environment* environment_push(Environment*);
-void environment_pop(const Environment*);
-void environment_insert(const Environment*, const String*, const Object*);
+void environment_init(Environment*, Environment*);
+void environment_free(Environment*);
+bool environment_insert(Environment*, const String*, const Object*);
 bool environment_retrieve(const Environment*, const String*, Object*);
 
 #endif // MONKEY_ENVIRONMENT_H_
