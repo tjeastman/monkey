@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "monkey/expression.h"
+#include "monkey/string.h"
 
 typedef enum ObjectType ObjectType;
 enum ObjectType {
@@ -26,7 +27,10 @@ struct Object {
     bool returned;
 };
 
-void object_init(Object*);
+bool object_init_integer(Object*, int);
+bool object_init_string(Object*, String*);
+bool object_init_bool(Object*, bool);
+bool object_init_function(Object*, FunctionExpression*);
 void object_copy(Object*, const Object*);
 void object_print(const Object*);
 

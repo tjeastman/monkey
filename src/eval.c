@@ -17,27 +17,6 @@ bool evaluate_identifier_expression(Environment* environment, IdentifierExpressi
     return true;
 }
 
-bool evaluate_integer_expression(Environment* environment, IntegerExpression* expression, Object* object)
-{
-    object->type = OBJECT_INTEGER;
-    object->integer = expression->value;
-    return true;
-}
-
-bool evaluate_string_expression(Environment* environment, StringExpression* expression, Object* object)
-{
-    object->type = OBJECT_STRING;
-    object->string = expression->value.value;
-    return true;
-}
-
-bool evaluate_bool_expression(Environment* environment, BooleanExpression* expression, Object* object)
-{
-    object->type = OBJECT_BOOL;
-    object->boolean = expression->value;
-    return true;
-}
-
 bool evaluate_prefix_negative_operation(Object* object)
 {
     if (object->type != OBJECT_INTEGER) {
@@ -170,7 +149,6 @@ bool evaluate_infix_expression(Environment* environment, InfixExpression* expres
     }
 
     Object object_right;
-    object_init(&object_right);
     if (!evaluate_expression(environment, expression->operand[1], &object_right)) {
         return false;
     }
@@ -235,13 +213,6 @@ bool evaluate_conditional_expression(Environment* environment, ConditionalExpres
     return true;
 }
 
-bool evaluate_function_expression(Environment* environment, FunctionExpression* expression, Object* object)
-{
-    object->type = OBJECT_FUNCTION;
-    object->function = expression;
-    return true;
-}
-
 bool evaluate_call_expression_arguments(Environment* environment, FunctionParameter* parameter, FunctionArgument* argument)
 {
     if (parameter == NULL && argument == NULL) {
@@ -256,7 +227,6 @@ bool evaluate_call_expression_arguments(Environment* environment, FunctionParame
 
     // note need to use "previous" environment
     Object object;
-    object_init(&object);
     if (!evaluate_expression(environment->next, argument->expression, &object)) {
         return false;
     }
@@ -269,7 +239,6 @@ bool evaluate_call_expression_arguments(Environment* environment, FunctionParame
 bool evaluate_call_expression(Environment* environment, CallExpression* expression, Object* object)
 {
     Object object_fn;
-    object_init(&object_fn);
     if (!evaluate_expression(environment, expression->function, &object_fn)) {
         return false;
     } else if (object_fn.type != OBJECT_FUNCTION) {
@@ -308,11 +277,11 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
     case EXPRESSION_IDENTIFIER:
         return evaluate_identifier_expression(environment, &expression->identifier, object);
     case EXPRESSION_INTEGER:
-        return evaluate_integer_expression(environment, &expression->integer, object);
+        return object_init_integer(object, expression->integer.value);
     case EXPRESSION_STRING:
-        return evaluate_string_expression(environment, &expression->string, object);
+        return object_init_string(object, &expression->string.value);
     case EXPRESSION_BOOL:
-        return evaluate_bool_expression(environment, &expression->boolean, object);
+        return object_init_bool(object, expression->boolean.value);
     case EXPRESSION_PREFIX:
         return evaluate_prefix_expression(environment, &expression->prefix, object);
     case EXPRESSION_INFIX:
@@ -320,7 +289,7 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
     case EXPRESSION_CONDITIONAL:
         return evaluate_conditional_expression(environment, &expression->conditional, object);
     case EXPRESSION_FUNCTION:
-        return evaluate_function_expression(environment, &expression->function, object);
+        return object_init_function(object, &expression->function);
     case EXPRESSION_CALL:
         return evaluate_call_expression(environment, &expression->call, object);
     case EXPRESSION_PUTS:
@@ -329,11 +298,6 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
         printf("*** EVALUATION ERROR: unexpected expression type\n");
         return false;
     }
-}
-
-bool evaluate_expression_statement(Environment* environment, Statement* statement, Object* object)
-{
-    return evaluate_expression(environment, &statement->expression, object);
 }
 
 bool evaluate_let_statement(Environment* environment, Statement* statement, Object* object)
@@ -363,7 +327,7 @@ bool evaluate_statement(Environment* environment, Statement* statement, Object* 
     case STATEMENT_RETURN:
         return evaluate_return_statement(environment, statement, object);
     case STATEMENT_EXPRESSION:
-        return evaluate_expression_statement(environment, statement, object);
+        return evaluate_expression(environment, &statement->expression, object);
     case STATEMENT_NONE:
         printf("*** EVALUATION ERROR: unexpected statement type\n");
         return false;
@@ -374,7 +338,6 @@ void evaluate_program(StatementBlock* block)
 {
     Environment* environment = environment_push(NULL);
     Object object;
-    object_init(&object);
     evaluate_statement_block_aux(environment, block, &object);
     environment_pop(environment);
 }

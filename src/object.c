@@ -1,12 +1,36 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include "monkey/expression.h"
 #include "monkey/object.h"
+#include "monkey/string.h"
 
-void object_init(Object* object)
+bool object_init_integer(Object* object, int value)
 {
-    object->type = OBJECT_NULL;
-    object->returned = false;
+    object->type = OBJECT_INTEGER;
+    object->integer = value;
+    return true;
+}
+
+bool object_init_string(Object* object, String* string)
+{
+    object->type = OBJECT_STRING;
+    object->string = string->value;
+    return true;
+}
+
+bool object_init_bool(Object* object, bool value)
+{
+    object->type = OBJECT_BOOL;
+    object->boolean = value;
+    return true;
+}
+
+bool object_init_function(Object* object, FunctionExpression* function)
+{
+    object->type = OBJECT_FUNCTION;
+    object->function = function;
+    return true;
 }
 
 void object_copy(Object* object, const Object* source)
