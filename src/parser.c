@@ -83,7 +83,6 @@ bool parser_parse_block_expression(Parser* parser, StatementBlock* block)
     parser_next(parser);
     while (parser->token.type != TOKEN_RIGHT_BRACE) {
         Statement statement;
-        statement_init(&statement);
         if (!parser_parse_statement(parser, &statement)) {
             statement_free(&statement);
             return false;
@@ -318,63 +317,56 @@ bool parser_parse_let_statement(Parser* parser, Statement* statement)
 {
     if (!parser_next_expect(parser, TOKEN_IDENTIFIER, ERROR_LET_TOKEN_IDENTIFIER)) {
         return false;
-    }
-
-    statement->identifier = (String*)malloc(sizeof(String));
-    string_copy(statement->identifier, &parser->token.lexeme);
-
-    if (!parser_next_expect(parser, TOKEN_ASSIGN, ERROR_LET_TOKEN_ASSIGN)) {
+    } else if (!statement_init_let(statement, &parser->token.lexeme)) {
+        return false;
+    } else if (!parser_next_expect(parser, TOKEN_ASSIGN, ERROR_LET_TOKEN_ASSIGN)) {
         return false;
     } else if (!parser_parse_expression_next(parser, &statement->expression, PRECEDENCE_LOWEST)) {
         return false;
     }
-
-    parser_next_if(parser, TOKEN_SEMICOLON);
-
     return true;
 }
 
 bool parser_parse_return_statement(Parser* parser, Statement* statement)
 {
-    if (!parser_parse_expression_next(parser, &statement->expression, PRECEDENCE_LOWEST)) {
+    if (!statement_init_return(statement)) {
+        return false;
+    } else if (!parser_parse_expression_next(parser, &statement->expression, PRECEDENCE_LOWEST)) {
         return false;
     }
-
-    parser_next_if(parser, TOKEN_SEMICOLON);
-
     return true;
 }
 
 bool parser_parse_expression_statement(Parser* parser, Statement* statement)
 {
-    if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
+    if (!statement_init_expression(statement)) {
+        return false;
+    } else if (!parser_parse_expression(parser, &statement->expression, PRECEDENCE_LOWEST)) {
         return false;
     }
-
-    parser_next_if(parser, TOKEN_SEMICOLON);
-
     return true;
 }
 
 bool parser_parse_statement(Parser* parser, Statement* statement)
 {
+    bool result;
     if (parser->token.type == TOKEN_LET) {
-        statement->type = STATEMENT_LET;
-        return parser_parse_let_statement(parser, statement);
+        result = parser_parse_let_statement(parser, statement);
     } else if (parser->token.type == TOKEN_RETURN) {
-        statement->type = STATEMENT_RETURN;
-        return parser_parse_return_statement(parser, statement);
+        result = parser_parse_return_statement(parser, statement);
     } else {
-        statement->type = STATEMENT_EXPRESSION;
-        return parser_parse_expression_statement(parser, statement);
+        result = parser_parse_expression_statement(parser, statement);
     }
+    if (result) {
+        parser_next_if(parser, TOKEN_SEMICOLON);
+    }
+    return result;
 }
 
 bool parser_parse_program(Parser* parser, StatementBlock* block)
 {
     while (parser_next(parser)) {
         Statement statement;
-        statement_init(&statement);
         if (parser_parse_statement(parser, &statement)) {
             statement_block_extend(block, &statement);
         } else {

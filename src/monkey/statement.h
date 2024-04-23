@@ -26,7 +26,9 @@ struct StatementBlock {
     Statement* tail;
 };
 
-void statement_init(Statement*);
+bool statement_init_let(Statement*, String*);
+bool statement_init_return(Statement*);
+bool statement_init_expression(Statement*);
 void statement_free(const Statement*);
 void statement_print(const Statement*);
 void statement_block_init(StatementBlock*);

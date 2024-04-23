@@ -4,12 +4,32 @@
 #include "monkey/statement.h"
 #include "monkey/string.h"
 
-void statement_init(Statement* statement)
+bool statement_init_let(Statement* statement, String* identifier)
 {
-    statement->type = STATEMENT_NONE;
+    statement->type = STATEMENT_LET;
+    statement->identifier = (String*)malloc(sizeof(String));
+    string_copy(statement->identifier, identifier);
+    statement->expression.type = EXPRESSION_NONE;
+    statement->next = NULL;
+    return true;
+}
+
+bool statement_init_return(Statement* statement)
+{
+    statement->type = STATEMENT_RETURN;
     statement->identifier = NULL;
     statement->expression.type = EXPRESSION_NONE;
     statement->next = NULL;
+    return true;
+}
+
+bool statement_init_expression(Statement* statement)
+{
+    statement->type = STATEMENT_EXPRESSION;
+    statement->identifier = NULL;
+    statement->expression.type = EXPRESSION_NONE;
+    statement->next = NULL;
+    return true;
 }
 
 void statement_free(const Statement* statement)
