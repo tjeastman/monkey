@@ -37,7 +37,7 @@ bool parse(FILE* file)
 
     bool result = parser_parse_program(&parser, &block);
     if (result) {
-        statement_block_print(&block);
+        statement_block_print(&block, 0);
     } else {
         error_print(&parser.error);
     }

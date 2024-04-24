@@ -7,7 +7,7 @@
 #include "monkey/string.h"
 
 void statement_block_free(const StatementBlock*);
-void statement_block_print(const StatementBlock*);
+void statement_block_print(const StatementBlock*, int);
 
 Expression* expression_new()
 {
@@ -179,59 +179,74 @@ void expression_free(const Expression* expression)
     }
 }
 
-void expression_print_bool(BooleanExpression expression)
+void expression_print_bool(BooleanExpression expression, int indent)
 {
-    printf("%s", expression.value ? "true" : "false");
+    printf("%*s%s", indent * 4, "", expression.value ? "true" : "false");
 }
 
-void expression_print_integer(IntegerExpression expression)
+void expression_print_integer(IntegerExpression expression, int indent)
 {
-    printf("%d", expression.value);
+    printf("%*s%d", indent * 4, "", expression.value);
 }
 
-void expression_print_string(StringExpression expression)
+void expression_print_string(StringExpression expression, int indent)
 {
+    printf("%*s", indent * 4, "");
     putchar('"');
     string_print(&expression.value);
     putchar('"');
 }
 
-void expression_print_identifier(IdentifierExpression expression)
+void expression_print_identifier(IdentifierExpression expression, int indent)
 {
+    printf("%*s", indent * 4, "");
     string_print(&expression.value);
 }
 
-void expression_print_prefix(PrefixExpression expression)
+void expression_print_prefix(PrefixExpression expression, int indent, bool group)
 {
-    putchar('(');
+    printf("%*s", indent * 4, "");
+    if (group) {
+        putchar('(');
+    }
     operation_print(expression.operation);
-    expression_print(expression.operand);
-    putchar(')');
+    expression_print(expression.operand, 0, true);
+    if (group) {
+        putchar(')');
+    }
 }
 
-void expression_print_infix(InfixExpression expression)
+void expression_print_infix(InfixExpression expression, int indent, bool group)
 {
-    putchar('(');
-    expression_print(expression.operand[0]);
+    printf("%*s", indent * 4, "");
+    if (group) {
+        putchar('(');
+    }
+    expression_print(expression.operand[0], 0, true);
     operation_print(expression.operation);
-    expression_print(expression.operand[1]);
-    putchar(')');
+    expression_print(expression.operand[1], 0, true);
+    if (group) {
+        putchar(')');
+    }
 }
 
-void expression_print_conditional(ConditionalExpression expression)
+void expression_print_conditional(ConditionalExpression expression, int indent)
 {
+    printf("%*s", indent * 4, "");
     printf("if (");
-    expression_print(expression.condition);
+    expression_print(expression.condition, 0, false);
     printf(")");
     if (expression.consequence != NULL) {
-        printf(" {\n    ");
-        statement_block_print(expression.consequence);
-        printf("}");
+        printf(" {\n");
+        statement_block_print(expression.consequence, indent + 1);
+        printf("%*s", indent * 4, "");
+        putchar('}');
     }
     if (expression.alternate != NULL) {
-        printf(" else {\n    ");
-        statement_block_print(expression.alternate);
-        printf("}");
+        printf(" else {\n");
+        statement_block_print(expression.alternate, indent + 1);
+        printf("%*s", indent * 4, "");
+        putchar('}');
     }
 }
 
@@ -246,20 +261,21 @@ void expression_print_function_parameters(FunctionParameter* parameters)
     }
 }
 
-void expression_print_function(FunctionExpression expression)
+void expression_print_function(FunctionExpression expression, int indent)
 {
+    printf("%*s", indent * 4, "");
     printf("fn(");
     expression_print_function_parameters(expression.parameters);
-    printf(") {\n    ");
-    statement_block_print(expression.body);
-    putchar('\n');
+    printf(") {\n");
+    statement_block_print(expression.body, indent + 1);
+    printf("%*s", indent * 4, "");
     putchar('}');
 }
 
 void expression_print_call_arguments(FunctionArgument* arguments)
 {
     while (arguments != NULL) {
-        expression_print(arguments->expression);
+        expression_print(arguments->expression, 0, false);
         if (arguments->next != NULL) {
             printf(", ");
         }
@@ -267,45 +283,46 @@ void expression_print_call_arguments(FunctionArgument* arguments)
     }
 }
 
-void expression_print_call(CallExpression expression)
+void expression_print_call(CallExpression expression, int indent)
 {
-    expression_print(expression.function);
+    printf("%*s", indent * 4, "");
+    expression_print(expression.function, 0, false);
     putchar('(');
     expression_print_call_arguments(expression.arguments);
     putchar(')');
 }
 
-void expression_print(const Expression* expression)
+void expression_print(const Expression* expression, int indent, bool group)
 {
     switch (expression->type) {
     case EXPRESSION_NONE:
         break;
     case EXPRESSION_BOOL:
-        expression_print_bool(expression->boolean);
+        expression_print_bool(expression->boolean, indent);
         break;
     case EXPRESSION_INTEGER:
-        expression_print_integer(expression->integer);
+        expression_print_integer(expression->integer, indent);
         break;
     case EXPRESSION_STRING:
-        expression_print_string(expression->string);
+        expression_print_string(expression->string, indent);
         break;
     case EXPRESSION_IDENTIFIER:
-        expression_print_identifier(expression->identifier);
+        expression_print_identifier(expression->identifier, indent);
         break;
     case EXPRESSION_PREFIX:
-        expression_print_prefix(expression->prefix);
+        expression_print_prefix(expression->prefix, indent, group);
         break;
     case EXPRESSION_INFIX:
-        expression_print_infix(expression->infix);
+        expression_print_infix(expression->infix, indent, group);
         break;
     case EXPRESSION_CONDITIONAL:
-        expression_print_conditional(expression->conditional);
+        expression_print_conditional(expression->conditional, indent);
         break;
     case EXPRESSION_FUNCTION:
-        expression_print_function(expression->function);
+        expression_print_function(expression->function, indent);
         break;
     case EXPRESSION_CALL:
-        expression_print_call(expression->call);
+        expression_print_call(expression->call, indent);
         break;
     }
 }

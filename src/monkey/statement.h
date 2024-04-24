@@ -30,10 +30,10 @@ bool statement_init_let(Statement*, String*);
 bool statement_init_return(Statement*);
 bool statement_init_expression(Statement*);
 void statement_free(const Statement*);
-void statement_print(const Statement*);
+void statement_print(const Statement*, int);
 void statement_block_init(StatementBlock*);
 void statement_block_free(const StatementBlock*);
 void statement_block_extend(StatementBlock*, const Statement*);
-void statement_block_print(const StatementBlock*);
+void statement_block_print(const StatementBlock*, int);
 
 #endif // MONKEY_STATEMENT_H_

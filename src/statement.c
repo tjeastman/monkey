@@ -44,16 +44,21 @@ void statement_free(const Statement* statement)
     }
 }
 
-void statement_print(const Statement* statement)
+void statement_print(const Statement* statement, int indent)
 {
     if (statement->type == STATEMENT_LET) {
+        printf("%*s", indent * 4, "");
         printf("let ");
         string_print(statement->identifier);
         printf(" = ");
+        expression_print(&statement->expression, 0, false);
     } else if (statement->type == STATEMENT_RETURN) {
+        printf("%*s", indent * 4, "");
         printf("return ");
+        expression_print(&statement->expression, 0, false);
+    } else {
+        expression_print(&statement->expression, indent, false);
     }
-    expression_print(&statement->expression);
     printf(";\n");
 }
 
@@ -84,11 +89,11 @@ void statement_block_extend(StatementBlock* block, const Statement* statement)
     }
 }
 
-void statement_block_print(const StatementBlock* block)
+void statement_block_print(const StatementBlock* block, int indent)
 {
     Statement* statement = block->head;
     while (statement != NULL) {
-        statement_print(statement);
+        statement_print(statement, indent);
         statement = statement->next;
     }
 }

@@ -19,6 +19,7 @@ bool function_length(Object* object)
 bool function_puts(Object* object)
 {
     object_print(object);
+    putchar('\n');
     object_free(object);
     return true;
 }

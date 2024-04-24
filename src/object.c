@@ -101,28 +101,33 @@ bool object_equal(const Object* object, const Object* object_alt)
     return false;
 }
 
+void object_print_function(FunctionExpression* function)
+{
+    printf("fn(");
+    expression_print_function_parameters(function->parameters);
+    printf(") {...}");
+}
+
 void object_print(const Object* object)
 {
     switch (object->type) {
     case OBJECT_NULL:
-        printf("NULL\n");
+        printf("NULL");
         break;
     case OBJECT_BOOL:
-        printf("bool: %s\n", object->boolean ? "true" : "false");
+        printf("%s", object->boolean ? "true" : "false");
         break;
     case OBJECT_INTEGER:
-        printf("integer: %d\n", object->integer);
+        printf("%d", object->integer);
         break;
     case OBJECT_STRING:
-        printf("string: ");
         string_print(object->string);
-        putchar('\n');
         break;
     case OBJECT_FUNCTION:
-        printf("function\n");
+        object_print_function(object->function);
         break;
     case OBJECT_INTERNAL:
-        printf("internal\n");
+        printf("internal");
         break;
     }
 }

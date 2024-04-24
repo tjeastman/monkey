@@ -114,7 +114,8 @@ bool expression_init_conditional(Expression*);
 bool expression_init_function(Expression*);
 bool expression_init_call(Expression*, Expression*);
 void expression_free(const Expression*);
-void expression_print(const Expression*);
+void expression_print_function_parameters(FunctionParameter*);
+void expression_print(const Expression*, int, bool);
 bool function_parameter_new(FunctionParameter**, const String*);
 bool function_argument_new(FunctionArgument**);
 
