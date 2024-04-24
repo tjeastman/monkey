@@ -113,7 +113,6 @@ bool expression_init_infix(Expression*, Expression*, Operation);
 bool expression_init_conditional(Expression*);
 bool expression_init_function(Expression*);
 bool expression_init_call(Expression*, Expression*);
-bool expression_init_puts(Expression*);
 void expression_free(const Expression*);
 void expression_print(const Expression*);
 bool function_parameter_new(FunctionParameter**, const String*);
