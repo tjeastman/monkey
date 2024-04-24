@@ -59,8 +59,9 @@ bool parser_next_expect(Parser* parser, TokenType token_type, ErrorType error_ty
 
 bool parser_parse_prefix_expression(Parser* parser, Expression* expression, Operation operation)
 {
-    expression_init_prefix(expression, operation);
-
+    if (!expression_init_prefix(expression, operation)) {
+        return false;
+    }
     return parser_parse_expression_next(parser, expression->prefix.operand, PRECEDENCE_PREFIX);
 }
 
@@ -232,13 +233,9 @@ bool parser_parse_array_element(Parser* parser, ArrayExpression** elements)
     return parser_parse_expression_next(parser, (*elements)->expression, PRECEDENCE_LOWEST);
 }
 
-bool parser_parse_array(Parser* parser, Expression* expression)
+bool parser_parse_array_expression(Parser* parser, Expression* expression)
 {
     // parser_next(parser); // left bracket
-
-    /* printf("array\n"); */
-    /* token_print(&parser->token); */
-    /* token_print(&parser->token_next); */
 
     if (!expression_init_array(expression)) {
         return false;
@@ -246,7 +243,6 @@ bool parser_parse_array(Parser* parser, Expression* expression)
 
     // zero length array
     if (parser_next_if(parser, TOKEN_RIGHT_BRACKET)) {
-        /* printf("yes"); */
         return true;
     }
 
@@ -292,7 +288,7 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
     case TOKEN_FUNCTION:
         return parser_parse_function_expression(parser, expression);
     case TOKEN_LEFT_BRACKET:
-        return parser_parse_array(parser, expression);
+        return parser_parse_array_expression(parser, expression);
     default:
         parser_error(parser, ERROR_TOKEN_UNEXPECTED);
         return false;
