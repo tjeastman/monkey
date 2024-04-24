@@ -57,5 +57,8 @@ void error_print(const Error* error)
     case ERROR_EXPRESSION_CALL_EXPECTED_COMMA:
         printf("expected comma in function arguments\n");
         break;
+    case ERROR_EXPRESSION_ARRAY_EXPECTED_COMMA:
+        printf("expected comma in array elements\n");
+        break;
     }
 }

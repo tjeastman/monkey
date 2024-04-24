@@ -21,6 +21,7 @@ enum ExpressionType {
     EXPRESSION_CONDITIONAL,
     EXPRESSION_FUNCTION,
     EXPRESSION_CALL,
+    EXPRESSION_ARRAY,
 };
 
 typedef struct IdentifierExpression IdentifierExpression;
@@ -76,6 +77,12 @@ struct CallExpression {
     Expression* function;
 };
 
+typedef struct ArrayExpression ArrayExpression;
+struct ArrayExpression {
+    Expression* expression;
+    ArrayExpression* next;
+};
+
 struct Expression {
     ExpressionType type;
     union {
@@ -88,6 +95,7 @@ struct Expression {
         ConditionalExpression conditional;
         FunctionExpression function;
         CallExpression call;
+        ArrayExpression* array;
     };
 };
 
@@ -102,8 +110,10 @@ bool expression_init_infix(Expression*, Expression*, Operation);
 bool expression_init_conditional(Expression*);
 bool expression_init_function(Expression*);
 bool expression_init_call(Expression*, Expression*);
+bool expression_init_array(Expression*);
 void expression_free(const Expression*);
 void expression_print_function_parameters(List*);
 void expression_print(const Expression*, int, bool);
+bool array_element_new(ArrayExpression**);
 
 #endif // MONKEY_EXPRESSION_H_

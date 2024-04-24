@@ -12,9 +12,12 @@ enum ObjectType {
     OBJECT_INTEGER,
     OBJECT_STRING,
     OBJECT_BOOL,
+    OBJECT_ARRAY,
     OBJECT_FUNCTION,
     OBJECT_INTERNAL,
 };
+
+typedef struct ObjectArray ObjectArray;
 
 typedef struct Object Object;
 struct Object {
@@ -23,15 +26,22 @@ struct Object {
         int integer;
         String* string;
         bool boolean;
+        ObjectArray* objects;
         FunctionExpression* function;
         bool (*internal)(Object*);
     };
     bool returned;
 };
 
+struct ObjectArray {
+    Object object;
+    ObjectArray* next;
+};
+
 bool object_init_integer(Object*, int);
 bool object_init_string(Object*, String*);
 bool object_init_bool(Object*, bool);
+bool object_init_array(Object*);
 bool object_init_function(Object*, FunctionExpression*);
 bool object_init_internal(Object*, bool (*)(Object*));
 void object_free(Object*);

@@ -93,6 +93,13 @@ bool expression_init_call(Expression* expression, Expression* function)
     return true;
 }
 
+bool expression_init_array(Expression* expression)
+{
+    expression->type = EXPRESSION_ARRAY;
+    expression->array = NULL;
+    return true;
+}
+
 void expression_free_prefix(const PrefixExpression* expression)
 {
     expression_free(expression->operand);
@@ -160,6 +167,16 @@ void expression_free_call(const CallExpression* expression)
     }
 }
 
+void expression_free_array(ArrayExpression* expression)
+{
+    if (expression == NULL) {
+        return;
+    }
+    expression_free_array(expression->next);
+    expression_free(expression->expression);
+    free(expression); // FIX: cannot be const
+}
+
 void expression_free(const Expression* expression)
 {
     if (expression->type == EXPRESSION_STRING) {
@@ -176,6 +193,8 @@ void expression_free(const Expression* expression)
         expression_free_function(&expression->function);
     } else if (expression->type == EXPRESSION_CALL) {
         expression_free_call(&expression->call);
+    } else if (expression->type == EXPRESSION_ARRAY) {
+        expression_free_array(expression->array);
     }
 }
 
@@ -325,4 +344,13 @@ void expression_print(const Expression* expression, int indent, bool group)
         expression_print_call(expression->call, indent);
         break;
     }
+}
+
+bool array_element_new(ArrayExpression** elements)
+{
+    ArrayExpression* element = (ArrayExpression*)malloc(sizeof(ArrayExpression));
+    element->expression = expression_new();
+    element->next = NULL;
+    *elements = element;
+    return true;
 }

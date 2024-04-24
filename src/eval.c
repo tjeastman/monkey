@@ -301,6 +301,33 @@ bool evaluate_call_expression(Environment* environment, CallExpression* expressi
     return result;
 }
 
+bool evaluate_array_expression(Environment* environment, ArrayExpression* expression, Object* object)
+{
+    object_init_array(object);
+
+    ObjectArray* element = (ObjectArray*)malloc(sizeof(ObjectArray));
+    element->next = NULL;
+    element->object.type = OBJECT_NULL;
+
+    object->objects = element;
+
+    for (; expression != NULL; expression = expression->next) {
+        if (!evaluate_expression(environment, expression->expression, &element->object)) {
+            printf("*** fail\n");
+            object_free(object);
+            return false;
+        }
+        if (expression->next != NULL) {
+            element->next = (ObjectArray*)malloc(sizeof(ObjectArray));
+            element = element->next;
+            element->next = NULL;
+            element->object.type = OBJECT_NULL;
+        }
+    }
+
+    return true;
+}
+
 bool evaluate_expression(Environment* environment, Expression* expression, Object* object)
 {
     switch (expression->type) {
@@ -322,6 +349,8 @@ bool evaluate_expression(Environment* environment, Expression* expression, Objec
         return object_init_function(object, &expression->function);
     case EXPRESSION_CALL:
         return evaluate_call_expression(environment, &expression->call, object);
+    case EXPRESSION_ARRAY:
+        return evaluate_array_expression(environment, expression->array, object);
     default:
         printf("*** EVALUATION ERROR: unexpected expression type\n");
         return false;

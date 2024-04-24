@@ -224,6 +224,51 @@ bool parser_parse_call_expression(Parser* parser, Expression* expression)
     return parser_parse_call_expression_arguments(parser, &expression->call.arguments);
 }
 
+bool parser_parse_array_element(Parser* parser, ArrayExpression** elements)
+{
+    if (!array_element_new(elements)) {
+        return false;
+    }
+    return parser_parse_expression_next(parser, (*elements)->expression, PRECEDENCE_LOWEST);
+}
+
+bool parser_parse_array(Parser* parser, Expression* expression)
+{
+    // parser_next(parser); // left bracket
+
+    /* printf("array\n"); */
+    /* token_print(&parser->token); */
+    /* token_print(&parser->token_next); */
+
+    if (!expression_init_array(expression)) {
+        return false;
+    }
+
+    // zero length array
+    if (parser_next_if(parser, TOKEN_RIGHT_BRACKET)) {
+        /* printf("yes"); */
+        return true;
+    }
+
+    // one length array
+    if (!parser_parse_array_element(parser, &expression->array)) {
+        return false;
+    }
+
+    // remaining elements
+    ArrayExpression* element = expression->array;
+    while (!parser_next_if(parser, TOKEN_RIGHT_BRACKET)) {
+        if (!parser_next_expect(parser, TOKEN_COMMA, ERROR_EXPRESSION_ARRAY_EXPECTED_COMMA)) {
+            return false;
+        } else if (!parser_parse_array_element(parser, &element->next)) {
+            return false;
+        }
+        element = element->next;
+    }
+
+    return true;
+}
+
 bool parser_parse_expression_left(Parser* parser, Expression* expression)
 {
     switch (parser->token.type) {
@@ -246,6 +291,8 @@ bool parser_parse_expression_left(Parser* parser, Expression* expression)
         return parser_parse_conditional_expression(parser, expression);
     case TOKEN_FUNCTION:
         return parser_parse_function_expression(parser, expression);
+    case TOKEN_LEFT_BRACKET:
+        return parser_parse_array(parser, expression);
     default:
         parser_error(parser, ERROR_TOKEN_UNEXPECTED);
         return false;

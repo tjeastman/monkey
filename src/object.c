@@ -32,6 +32,14 @@ bool object_init_bool(Object* object, bool value)
     return true;
 }
 
+bool object_init_array(Object* object)
+{
+    object->type = OBJECT_ARRAY;
+    object->objects = NULL;
+    object->returned = false;
+    return true;
+}
+
 bool object_init_function(Object* object, FunctionExpression* function)
 {
     object->type = OBJECT_FUNCTION;
@@ -48,14 +56,49 @@ bool object_init_internal(Object* object, bool (*internal)(Object*))
     return true;
 }
 
+void object_free_array(ObjectArray* objects)
+{
+    if (objects == NULL) {
+        return;
+    }
+    object_free_array(objects->next);
+    object_free(&objects->object);
+    // FIX:
+    // free(object);
+}
+
 void object_free(Object* object)
 {
     if (object->type == OBJECT_STRING) {
         string_free(object->string);
         free(object->string);
+    } else if (object->type == OBJECT_ARRAY) {
+        object_free_array(object->objects);
     }
     object->type = OBJECT_NULL;
     object->returned = false;
+}
+
+bool object_copy_array(Object* object, const Object* source)
+{
+    if (!object_init_array(object)) {
+        return false;
+    }
+
+    object->objects = (ObjectArray*)malloc(sizeof(ObjectArray));
+    object->objects->next = NULL;
+    ObjectArray* tmp = object->objects;
+
+    for (ObjectArray* array = source->objects; array != NULL; array = array->next) {
+        object_copy(&tmp->object, &array->object);
+        if (array->next != NULL) {
+            tmp->next = (ObjectArray*)malloc(sizeof(ObjectArray));
+            tmp->next->next = NULL;
+            tmp = tmp->next;
+        }
+    }
+
+    return true;
 }
 
 bool object_copy(Object* object, const Object* source)
@@ -69,12 +112,28 @@ bool object_copy(Object* object, const Object* source)
         return object_init_integer(object, source->integer);
     } else if (source->type == OBJECT_STRING) {
         return object_init_string(object, source->string);
+    } else if (source->type == OBJECT_ARRAY) {
+        return object_copy_array(object, source);
     } else if (source->type == OBJECT_FUNCTION) {
         return object_init_function(object, source->function);
     } else if (source->type == OBJECT_INTERNAL) {
         return object_init_internal(object, source->internal);
     }
     return true;
+}
+
+bool object_equal_array(const ObjectArray* objects, const ObjectArray* objects_alt)
+{
+    if (objects == NULL && objects_alt == NULL) {
+        return true;
+    } else if (objects == NULL) {
+        return false;
+    } else if (objects_alt == NULL) {
+        return false;
+    } else if (!object_equal(&objects->object, &objects_alt->object)) {
+        return false;
+    }
+    return object_equal_array(objects->next, objects_alt->next);
 }
 
 bool object_equal(const Object* object, const Object* object_alt)
@@ -92,6 +151,8 @@ bool object_equal(const Object* object, const Object* object_alt)
         return object->integer == object_alt->integer;
     case OBJECT_STRING:
         return string_equal(object->string, object_alt->string);
+    case OBJECT_ARRAY:
+        return object_equal_array(object->objects, object_alt->objects);
     case OBJECT_FUNCTION:
         return object->function == object_alt->function;
     case OBJECT_INTERNAL:
@@ -99,6 +160,16 @@ bool object_equal(const Object* object, const Object* object_alt)
     }
 
     return false;
+}
+
+void object_print_array(ObjectArray* objects)
+{
+    if (objects == NULL) {
+        return;
+    }
+    printf("  ");
+    object_print(&objects->object);
+    object_print_array(objects->next);
 }
 
 void object_print_function(FunctionExpression* function)
@@ -122,6 +193,11 @@ void object_print(const Object* object)
         break;
     case OBJECT_STRING:
         string_print(object->string);
+        break;
+    case OBJECT_ARRAY:
+        printf("[\n");
+        object_print_array(object->objects);
+        printf("]\n");
         break;
     case OBJECT_FUNCTION:
         object_print_function(object->function);
