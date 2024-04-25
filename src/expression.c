@@ -311,6 +311,19 @@ void expression_print_call(CallExpression expression, int indent)
     putchar(')');
 }
 
+void expression_print_array(ArrayExpression* array, int indent)
+{
+    printf("%*s[", indent * 4, "");
+    while (array != NULL) {
+        expression_print(array->expression, 0, false);
+        array = array->next;
+        if (array != NULL) {
+            printf(", ");
+        }
+    }
+    putchar(']');
+}
+
 void expression_print(const Expression* expression, int indent, bool group)
 {
     switch (expression->type) {
@@ -342,6 +355,9 @@ void expression_print(const Expression* expression, int indent, bool group)
         break;
     case EXPRESSION_CALL:
         expression_print_call(expression->call, indent);
+        break;
+    case EXPRESSION_ARRAY:
+        expression_print_array(expression->array, indent);
         break;
     }
 }
