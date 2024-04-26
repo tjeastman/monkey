@@ -121,9 +121,9 @@ void expression_free_conditional(const ConditionalExpression* expression)
     }
 }
 
-void expression_free_function_parameters(const FunctionParameter* parameter)
+void expression_free_function_parameters(const List* parameter)
 {
-    string_free(&parameter->name);
+    string_free((String*)parameter->data);
     if (parameter->next != NULL) {
         expression_free_function_parameters(parameter->next);
         free(parameter->next);
@@ -142,9 +142,9 @@ void expression_free_function(const FunctionExpression* expression)
     }
 }
 
-void expression_free_call_arguments(const FunctionArgument* argument)
+void expression_free_call_arguments(const List* argument)
 {
-    expression_free(argument->expression);
+    expression_free((Expression*)argument->data);
     if (argument->next != NULL) {
         expression_free_call_arguments(argument->next);
         free(argument->next);
@@ -250,10 +250,10 @@ void expression_print_conditional(ConditionalExpression expression, int indent)
     }
 }
 
-void expression_print_function_parameters(FunctionParameter* parameters)
+void expression_print_function_parameters(List* parameters)
 {
     while (parameters != NULL) {
-        string_print(&parameters->name);
+        string_print((String*)parameters->data);
         if (parameters->next != NULL) {
             printf(", ");
         }
@@ -272,10 +272,10 @@ void expression_print_function(FunctionExpression expression, int indent)
     putchar('}');
 }
 
-void expression_print_call_arguments(FunctionArgument* arguments)
+void expression_print_call_arguments(List* arguments)
 {
     while (arguments != NULL) {
-        expression_print(arguments->expression, 0, false);
+        expression_print((Expression*)arguments->data, 0, false);
         if (arguments->next != NULL) {
             printf(", ");
         }
@@ -325,22 +325,4 @@ void expression_print(const Expression* expression, int indent, bool group)
         expression_print_call(expression->call, indent);
         break;
     }
-}
-
-bool function_parameter_new(FunctionParameter** parameters, const String* identifier)
-{
-    FunctionParameter* parameter = (FunctionParameter*)malloc(sizeof(FunctionParameter));
-    string_copy(&parameter->name, identifier);
-    parameter->next = NULL;
-    *parameters = parameter;
-    return true;
-}
-
-bool function_argument_new(FunctionArgument** arguments)
-{
-    FunctionArgument* argument = (FunctionArgument*)malloc(sizeof(FunctionArgument));
-    argument->expression = expression_new();
-    argument->next = NULL;
-    *arguments = argument;
-    return true;
 }

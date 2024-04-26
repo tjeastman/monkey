@@ -226,7 +226,7 @@ bool evaluate_conditional_expression(Environment* environment, ConditionalExpres
     return true;
 }
 
-bool evaluate_call_expression_arguments(Environment* environment, FunctionParameter* parameter, FunctionArgument* argument)
+bool evaluate_call_expression_arguments(Environment* environment, List* parameter, List* argument)
 {
     if (parameter == NULL && argument == NULL) {
         return true;
@@ -240,9 +240,9 @@ bool evaluate_call_expression_arguments(Environment* environment, FunctionParame
 
     // note need to use "previous" environment
     Object object;
-    if (!evaluate_expression(environment->next, argument->expression, &object)) {
+    if (!evaluate_expression(environment->next, (Expression*)argument->data, &object)) {
         return false;
-    } else if (!environment_insert(environment, &parameter->name, &object)) {
+    } else if (!environment_insert(environment, (String*)parameter->data, &object)) {
         return false;
     }
     object_free(&object);
@@ -277,7 +277,7 @@ bool evaluate_call_expression_internal(Environment* environment, CallExpression*
     } else if (expression->arguments->next != NULL) {
         printf("*** EVALUATION ERROR: too many arguments in call expression\n");
         return false;
-    } else if (!evaluate_expression(environment, expression->arguments->expression, object)) {
+    } else if (!evaluate_expression(environment, (Expression*)expression->arguments->data, object)) {
         return false;
     }
 

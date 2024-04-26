@@ -4,6 +4,7 @@
 
 #include "monkey/error.h"
 #include "monkey/expression.h"
+#include "monkey/list.h"
 #include "monkey/parser.h"
 #include "monkey/statement.h"
 #include "monkey/string.h"
@@ -121,28 +122,38 @@ bool parser_parse_conditional_expression(Parser* parser, Expression* expression)
     return parser_parse_block_expression(parser, expression->conditional.alternate);
 }
 
-bool parser_parse_function_parameters(Parser* parser, FunctionParameter** parameters)
+bool parser_parse_function_expression_parameter(Parser* parser, List** parameters)
 {
-    // zero parameters
+    String name;
+    if (!parser_next_expect(parser, TOKEN_IDENTIFIER, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER)) {
+        return false;
+    } else if (!string_copy(&name, &parser->token.lexeme)) {
+        return false;
+    } else if (!list_append(parameters, &name, sizeof(String))) {
+        string_free(&name);
+        return false;
+    }
+    return true;
+}
+
+bool parser_parse_function_expression_parameters(Parser* parser, List** parameters)
+{
+    //  zero parameters
     if (parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
         return true;
     }
 
     // first parameter
-    if (!parser_next_expect(parser, TOKEN_IDENTIFIER, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER)) {
-        return false;
-    } else if (!function_parameter_new(parameters, &parser->token.lexeme)) {
+    if (!parser_parse_function_expression_parameter(parser, parameters)) {
         return false;
     }
 
     // remaining parameters
-    FunctionParameter* parameter = *parameters;
+    List* parameter = *parameters;
     while (!parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
         if (!parser_next_expect(parser, TOKEN_COMMA, ERROR_EXPRESSION_FUNCTION_EXPECTED_COMMA)) {
             return false;
-        } else if (!parser_next_expect(parser, TOKEN_IDENTIFIER, ERROR_EXPRESSION_FUNCTION_EXPECTED_IDENTIFIER)) {
-            return false;
-        } else if (!function_parameter_new(&parameter->next, &parser->token.lexeme)) {
+        } else if (!parser_parse_function_expression_parameter(parser, &parameter->next)) {
             return false;
         }
         parameter = parameter->next;
@@ -157,7 +168,7 @@ bool parser_parse_function_expression(Parser* parser, Expression* expression)
         return false;
     } else if (!expression_init_function(expression)) {
         return false;
-    } else if (!parser_parse_function_parameters(parser, &expression->function.parameters)) {
+    } else if (!parser_parse_function_expression_parameters(parser, &expression->function.parameters)) {
         return false;
     }
 
@@ -167,15 +178,19 @@ bool parser_parse_function_expression(Parser* parser, Expression* expression)
     return parser_parse_block_expression(parser, expression->function.body);
 }
 
-bool parser_parse_call_argument(Parser* parser, FunctionArgument** arguments)
+bool parser_parse_call_expression_argument(Parser* parser, List** arguments)
 {
-    if (!function_argument_new(arguments)) {
+    Expression expression;
+    if (!parser_parse_expression_next(parser, &expression, PRECEDENCE_LOWEST)) {
+        return false;
+    } else if (!list_append(arguments, (void*)&expression, sizeof(Expression))) {
+        expression_free(&expression);
         return false;
     }
-    return parser_parse_expression_next(parser, (*arguments)->expression, PRECEDENCE_LOWEST);
+    return true;
 }
 
-bool parser_parse_call_arguments(Parser* parser, Expression* expression, FunctionArgument** arguments)
+bool parser_parse_call_expression_arguments(Parser* parser, List** arguments)
 {
     // zero arguments
     if (parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
@@ -183,16 +198,16 @@ bool parser_parse_call_arguments(Parser* parser, Expression* expression, Functio
     }
 
     // first argument
-    if (!parser_parse_call_argument(parser, arguments)) {
+    if (!parser_parse_call_expression_argument(parser, arguments)) {
         return false;
     }
 
     // remaining arguments
-    FunctionArgument* argument = *arguments;
+    List* argument = *arguments;
     while (!parser_next_if(parser, TOKEN_RIGHT_PAREN)) {
         if (!parser_next_expect(parser, TOKEN_COMMA, ERROR_EXPRESSION_CALL_EXPECTED_COMMA)) {
             return false;
-        } else if (!parser_parse_call_argument(parser, &argument->next)) {
+        } else if (!parser_parse_call_expression_argument(parser, &argument->next)) {
             return false;
         }
         argument = argument->next;
@@ -206,7 +221,7 @@ bool parser_parse_call_expression(Parser* parser, Expression* expression)
     if (!expression_init_call(expression, expression_move(expression))) {
         return false;
     }
-    return parser_parse_call_arguments(parser, expression, &expression->call.arguments);
+    return parser_parse_call_expression_arguments(parser, &expression->call.arguments);
 }
 
 bool parser_parse_expression_left(Parser* parser, Expression* expression)

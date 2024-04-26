@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include "monkey/list.h"
 #include "monkey/operation.h"
 #include "monkey/string.h"
 
@@ -63,28 +64,16 @@ struct ConditionalExpression {
     StatementBlock* alternate;
 };
 
-typedef struct FunctionParameter FunctionParameter;
-struct FunctionParameter {
-    String name;
-    FunctionParameter* next;
-};
-
 typedef struct FunctionExpression FunctionExpression;
 struct FunctionExpression {
-    FunctionParameter* parameters;
+    List* parameters;
     StatementBlock* body;
-};
-
-typedef struct FunctionArgument FunctionArgument;
-struct FunctionArgument {
-    Expression* expression;
-    FunctionArgument* next;
 };
 
 typedef struct CallExpression CallExpression;
 struct CallExpression {
+    List* arguments;
     Expression* function;
-    FunctionArgument* arguments;
 };
 
 struct Expression {
@@ -114,9 +103,7 @@ bool expression_init_conditional(Expression*);
 bool expression_init_function(Expression*);
 bool expression_init_call(Expression*, Expression*);
 void expression_free(const Expression*);
-void expression_print_function_parameters(FunctionParameter*);
+void expression_print_function_parameters(List*);
 void expression_print(const Expression*, int, bool);
-bool function_parameter_new(FunctionParameter**, const String*);
-bool function_argument_new(FunctionArgument**);
 
 #endif // MONKEY_EXPRESSION_H_
